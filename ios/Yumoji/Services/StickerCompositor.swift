@@ -20,15 +20,7 @@ enum StickerCompositor {
 
         let longSide = max(subject.width, subject.height)
         let border = style.borderWidth(subjectLongSide: longSide)
-        let margin = style.marginWidth(subjectLongSide: longSide)
-        // One spare pixel keeps the antialiased border edge off the canvas edge.
-        let pad = Int((border + margin).rounded(.up)) + 1
-        let crop = PixelRect(
-            x: subject.x - pad,
-            y: subject.y - pad,
-            width: subject.width + 2 * pad,
-            height: subject.height + 2 * pad
-        )
+        let crop = cropRect(subject: subject, style: style)
 
         let subjectPixels = mask.croppedPixels(to: crop)
         guard let subjectMask = SubjectMask.grayImage(
@@ -78,6 +70,22 @@ enum StickerCompositor {
         context.restoreGState()
 
         return context.makeImage()
+    }
+
+    /// The sticker canvas in photo pixels: the subject plus border and margin.
+    /// It can reach past the photo edge. The sticker image has exactly this size.
+    static func cropRect(subject: PixelRect, style: StickerStyle) -> PixelRect {
+        let longSide = max(subject.width, subject.height)
+        let border = style.borderWidth(subjectLongSide: longSide)
+        let margin = style.marginWidth(subjectLongSide: longSide)
+        // One spare pixel keeps the antialiased border edge off the canvas edge.
+        let pad = Int((border + margin).rounded(.up)) + 1
+        return PixelRect(
+            x: subject.x - pad,
+            y: subject.y - pad,
+            width: subject.width + 2 * pad,
+            height: subject.height + 2 * pad
+        )
     }
 
     /// Grows the mask by `radius` pixels, then blurs and re-sharpens the edge so

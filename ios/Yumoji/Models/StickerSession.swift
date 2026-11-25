@@ -32,6 +32,10 @@ final class StickerSession {
     private(set) var cutout: CutoutState = .working
     private(set) var analysis: AnalysisState = .loading
     private(set) var sticker: UIImage?
+    /// The decoded photo, kept so the stage can show it while the cutout runs.
+    private(set) var photoImage: UIImage?
+    /// Where the sticker canvas sits in the photo, in photo pixels.
+    private(set) var stickerCrop: PixelRect?
     /// Long side of the detected subject in pixels; 0 until the cutout is done.
     private(set) var subjectLongSide = 0
 
@@ -76,6 +80,8 @@ final class StickerSession {
         photo = nil
         mask = nil
         sticker = nil
+        photoImage = nil
+        stickerCrop = nil
         subjectLongSide = 0
         cutout = .working
         analysis = .loading
@@ -102,6 +108,7 @@ final class StickerSession {
         }
 
         photo = loaded
+        photoImage = UIImage(cgImage: loaded)
         startAnalysis()
 
         do {
@@ -187,7 +194,8 @@ final class StickerSession {
             }.value
 
             guard token == generation else { continue }
-            if let rendered {
+            if let rendered, let bounds = currentMask.bounds {
+                stickerCrop = StickerCompositor.cropRect(subject: bounds, style: currentStyle)
                 sticker = UIImage(cgImage: rendered)
                 cutout = .ready
             } else if sticker == nil {
