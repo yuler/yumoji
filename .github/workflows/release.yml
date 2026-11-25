@@ -76,10 +76,24 @@ jobs:
           INPUT_TESTFLIGHT: ${{ inputs.upload_testflight }}
         run: node .github/scripts/resolve-release.mjs
 
+  ios-testflight:
+    name: Upload iOS TestFlight
+    needs: plan
+    if: needs.plan.outputs.skip != 'true' && needs.plan.outputs.upload_testflight == 'true'
+    uses: ./.github/workflows/ios-release.yml
+    with:
+      version: ${{ needs.plan.outputs.version }}
+      ref: ${{ needs.plan.outputs.sha }}
+    secrets: inherit
+
   tag-release:
     name: Tag & GitHub Release
-    needs: plan
-    if: needs.plan.outputs.skip != 'true'
+    needs: [plan, ios-testflight]
+    if: >-
+      always() &&
+      needs.plan.result == 'success' &&
+      needs.plan.outputs.skip != 'true' &&
+      (needs.ios-testflight.result == 'success' || needs.ios-testflight.result == 'skipped')
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -108,13 +122,3 @@ jobs:
               --title "$TAG" \
               --generate-notes
           fi
-
-  ios-testflight:
-    name: Upload iOS TestFlight
-    needs: [plan, tag-release]
-    if: needs.plan.outputs.skip != 'true' && needs.plan.outputs.upload_testflight == 'true'
-    uses: ./.github/workflows/ios-release.yml
-    with:
-      version: ${{ needs.plan.outputs.version }}
-      ref: ${{ needs.plan.outputs.sha }}
-    secrets: inherit
