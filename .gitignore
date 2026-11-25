@@ -26,6 +26,3 @@ ios/Signing.xcconfig
 # Agent worktrees
 .worktree/
 
-# Local todos
-TODO.md
-
