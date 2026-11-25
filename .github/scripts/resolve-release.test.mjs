@@ -50,7 +50,7 @@ test("isReleasePath matches iOS app and release script paths only", () => {
 
   assert.equal(isReleasePath("README.md"), false);
   assert.equal(isReleasePath("docs/feasibility-and-plan.md"), false);
-  assert.equal(isReleasePath("prototypes/core-loop/app.js"), false);
+  assert.equal(isReleasePath("prototypes/ios-mvp/app.js"), false);
   assert.equal(isReleasePath("scripts/setup-testflight.sh"), false);
 });
 
@@ -96,7 +96,7 @@ test("auto release skips docs and prototype-only commits", () => {
     repo.commitFile("ios/Yumoji/YumojiApp.swift", "// v1\n", "init");
     repo.run("tag", "v0.1.0");
     repo.commitFile("README.md", "# Yumoji\n", "📝 [docs] Update README");
-    repo.commitFile("prototypes/core-loop/app.js", "// prototype\n", "🎨 [proto] Tweak card");
+    repo.commitFile("prototypes/ios-mvp/app.js", "// prototype\n", "🎨 [proto] Tweak card");
 
     const plan = resolveReleasePlan({ cwd: repo.dir, eventName: "workflow_run" });
     assert.equal(plan.skip, true);

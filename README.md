@@ -15,6 +15,10 @@ Yumoji = **yummy** + **emoji**。
 - **看一眼**：AI 给出菜名、估算热量和食物简介，热量只是粗估，可以手改。
 - **翻一翻**：在日历里回看每天吃过的贴纸。
 
+## 原型预览
+
+直接用浏览器打开 `prototypes/ios-mvp/index.html`，即可体验和 `ios/Yumoji` 当前实现一致的 MVP 页面：首页 → 拍一张 / 从相册选一张 → 抠图贴纸、识别结果与调试参数。贴纸按 `StickerCompositor` 的步骤在浏览器里合成，识别结果与 `MockFoodAnalyzer` 相同；右侧「原型控制」可模拟无相机、抠图失败、不是食物、识别失败等情况。
+
 ## 当前状态
 
 调研阶段，还没有代码。结论与路线见 [项目可行性与实施规划](docs/feasibility-and-plan.md)。
