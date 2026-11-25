@@ -17,7 +17,7 @@ Yumoji = **yummy** + **emoji**。
 
 ## 原型预览
 
-直接用浏览器打开 `prototypes/core-loop/index.html`，即可体验 MVP 的「日历 → 拍一口 → 抠图确认 → 识别结果 → 收进日历」核心闭环。原型用 emoji 代替真实抠图，识别结果是假数据；拍照页可切换样例照片，并能模拟识别失败、一盘多菜、不是食物、找不到主体等情况。
+直接用浏览器打开 `prototypes/core-loop/index.html`，即可体验和 `ios/Yumoji` 当前实现一致的 MVP 页面：首页 → 拍一张 / 从相册选一张 → 抠图贴纸、识别结果与调试参数。贴纸按 `StickerCompositor` 的步骤在浏览器里合成，识别结果与 `MockFoodAnalyzer` 相同；右侧「原型控制」可模拟无相机、抠图失败、不是食物、识别失败等情况。
 
 ## 当前状态
 

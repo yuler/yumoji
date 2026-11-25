@@ -3,119 +3,114 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>Yumoji 吃吃贴纸 · 核心闭环原型</title>
+  <title>Yumoji 吃吃贴纸 · MVP 原型</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div class="phone">
-    <div class="statusbar"><span>9:41</span><span class="island"></span><span>100%</span></div>
+  <div class="layout">
+    <div class="phone">
+      <div class="statusbar"><span>9:41</span><span class="island"></span><span>100%</span></div>
 
-    <!-- 日历 -->
-    <section id="calendar" class="screen active">
-      <header class="cal-head">
-        <p class="date" id="today-date"></p>
-        <h1>Yumoji</h1>
-        <p class="sub">把每一口好吃的，收成一枚贴纸</p>
-      </header>
+      <!-- HomeView -->
+      <section id="home" class="screen active">
+        <div class="home-hero">
+          <p class="home-emoji">🍙</p>
+          <h1>Yumoji</h1>
+          <p class="tagline">把每一口好吃的，收成一枚贴纸</p>
+        </div>
+        <div class="home-actions">
+          <button class="action filled" id="camera-btn">
+            <svg viewBox="0 0 24 24"><path d="M9 4h6l1.6 2H20a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h3.4Zm3 4.5a4.5 4.5 0 1 0 0 9 4.5 4.5 0 0 0 0-9Z" fill="currentColor"/></svg>拍一张
+          </button>
+          <button class="action" id="library-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="6" y="3" width="15" height="13" rx="2.5"/><path d="M3 7.5V18a3 3 0 0 0 3 3h11"/><path d="m8.5 13.5 3.5-3.5 3 3 1.5-1.5 2.5 2.5"/></svg>从相册选一张
+          </button>
+          <p class="no-camera" id="no-camera" hidden>这台设备没有可用的相机，请从相册选择</p>
+        </div>
+      </section>
 
-      <div class="today-card">
-        <div class="today-stickers" id="today-stickers"></div>
-        <div class="today-text">
-          <p class="today-title" id="today-title"></p>
-          <p class="today-hint" id="today-hint"></p>
+      <!-- ResultView -->
+      <section id="result" class="screen">
+        <header class="result-head">
+          <button class="back" id="again-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5 8 12l7 7"/></svg>再来一张
+          </button>
+        </header>
+        <div class="result-scroll">
+          <div class="stage" id="stage"></div>
+          <div class="card" id="analysis"></div>
+          <!-- StickerTuningView -->
+          <div class="card tuning" id="tuning" hidden>
+            <button class="disclosure" id="tuning-toggle">
+              <span>调试 · 贴纸参数</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m9 5 7 7-7 7"/></svg>
+            </button>
+            <div class="tuning-body" id="tuning-body" hidden>
+              <div class="slider" data-key="borderRatio"><p><span>白边宽度 borderRatio</span><b></b></p><input type="range" step="0.001" /></div>
+              <div class="slider" data-key="edgeSmoothing"><p><span>白边平滑 edgeSmoothing</span><b></b></p><input type="range" step="0.001" /></div>
+              <div class="slider" data-key="marginRatio"><p><span>透明留白 marginRatio</span><b></b></p><input type="range" step="0.001" /></div>
+              <pre class="summary" id="summary"></pre>
+              <label class="toggle"><span>下次识别模拟失败</span><input type="checkbox" id="fail-next" /><i></i></label>
+              <div class="tuning-btns">
+                <button id="reset-style">恢复默认参数</button>
+                <button id="reanalyze">重新识别</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- CameraPicker：系统相机（UIImagePickerController） -->
+      <div class="camera" id="camera" hidden>
+        <div class="cam-top"></div>
+        <div class="cam-view"><canvas id="cam-canvas" width="1024" height="1024"></canvas></div>
+        <div class="cam-bottom" id="cam-live">
+          <button class="cam-text" id="cam-cancel">取消</button>
+          <button class="shutter" id="shutter" aria-label="拍照"></button>
+          <span class="cam-text"></span>
+        </div>
+        <div class="cam-bottom" id="cam-review" hidden>
+          <button class="cam-text" id="cam-retake">重拍</button>
+          <span></span>
+          <button class="cam-text" id="cam-use">使用照片</button>
         </div>
       </div>
 
-      <div class="month">
-        <div class="month-bar">
-          <button class="icon-btn" id="prev-month" aria-label="上个月">‹</button>
-          <b id="month-title"></b>
-          <button class="icon-btn" id="next-month" aria-label="下个月">›</button>
-        </div>
-        <div class="weekdays"><span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span></div>
-        <div class="days" id="days"></div>
-      </div>
-
-      <button class="fab" id="snap-btn"><span>📷</span>拍一口</button>
-    </section>
-
-    <!-- 拍照 -->
-    <section id="camera" class="screen dark">
-      <header class="cam-head">
-        <button class="icon-btn light" id="cam-close" aria-label="关闭">✕</button>
-        <label class="debug"><input type="checkbox" id="fail-toggle" /> 模拟识别失败</label>
-      </header>
-      <div class="viewfinder" id="viewfinder">
-        <div class="plate" id="cam-plate"></div>
-        <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
-      </div>
-      <p class="cam-hint" id="cam-hint"></p>
-      <div class="samples" id="samples"></div>
-      <footer class="cam-foot">
-        <button class="album" id="album-btn" aria-label="从相册选">🖼</button>
-        <button class="shutter" id="shutter-btn" aria-label="拍照"></button>
-        <span class="album-spacer"></span>
-      </footer>
-    </section>
-
-    <!-- 抠图与确认 -->
-    <section id="cutout" class="screen">
-      <header class="bar">
-        <button class="link" id="cut-back">‹ 重拍</button>
-      </header>
-      <div class="stage photo-stage" id="cut-stage">
-        <div class="plate big" id="cut-plate"></div>
-        <div class="scan" id="scan"></div>
-      </div>
-      <div class="cut-info">
-        <p class="cut-title" id="cut-title">正在抠图…</p>
-        <p class="sub" id="cut-sub">把食物从照片里抠出来</p>
-      </div>
-      <footer class="foot">
-        <button class="btn primary" id="cut-confirm" disabled>就这块</button>
-      </footer>
-    </section>
-
-    <!-- 结果 -->
-    <section id="result" class="screen">
-      <header class="bar">
-        <button class="link" id="res-back">‹ 再来一张</button>
-      </header>
-      <div class="stage" id="res-stage"></div>
-      <div class="card analysis" id="analysis"></div>
-      <footer class="foot">
-        <button class="btn primary" id="save-btn">收进今天</button>
-      </footer>
-    </section>
-
-    <!-- 当日贴纸 -->
-    <div class="sheet-mask" id="day-sheet" hidden>
-      <div class="sheet">
-        <div class="grabber"></div>
-        <h2 class="sheet-title" id="day-title"></h2>
-        <p class="sub" id="day-sub"></p>
-        <ul class="entries" id="entries"></ul>
-        <p class="empty" id="day-empty" hidden>这天还没有贴纸</p>
-      </div>
-    </div>
-
-    <!-- 改热量 -->
-    <div class="alert-mask" id="kcal-alert" hidden>
-      <div class="alert">
-        <p class="alert-title">改一下热量</p>
-        <p class="alert-body">AI 只是粗估，按你知道的来</p>
-        <div class="kcal-input"><input id="kcal-input" type="number" inputmode="numeric" min="0" max="5000" /><span>千卡</span></div>
-        <div class="alert-btns">
-          <button id="kcal-cancel">取消</button>
-          <button id="kcal-ok" class="strong">好</button>
+      <!-- PhotosPicker：系统相册选择 -->
+      <div class="picker-mask" id="picker" hidden>
+        <div class="picker">
+          <header class="picker-head">
+            <button id="picker-cancel">取消</button>
+            <b>照片</b>
+            <span></span>
+          </header>
+          <div class="picker-grid" id="picker-grid"></div>
         </div>
       </div>
     </div>
 
-    <div class="toast" id="toast" hidden></div>
+    <!-- 原型控制：模拟 iOS 里由设备和服务决定的情况，不属于 App 界面 -->
+    <aside class="controls">
+      <h2>原型控制</h2>
+      <p class="hint">对照 ios/Yumoji 当前实现。这里模拟设备与服务的结果，不是 App 界面。</p>
+      <label><input type="checkbox" id="ctl-camera" checked /> 设备有可用相机</label>
+      <fieldset>
+        <legend>抠图结果</legend>
+        <label><input type="radio" name="cutout" value="ok" checked /> 正常抠出主体</label>
+        <label><input type="radio" name="cutout" value="noSubject" /> 没找到主体</label>
+        <label><input type="radio" name="cutout" value="unreadable" /> 照片读不出来</label>
+      </fieldset>
+      <fieldset>
+        <legend>识别结果</legend>
+        <label><input type="radio" name="analysis" value="mock" checked /> 随机（同 MockFoodAnalyzer）</label>
+        <label><input type="radio" name="analysis" value="notFood" /> 不是食物</label>
+        <label><input type="radio" name="analysis" value="fail" /> 失败</label>
+      </fieldset>
+    </aside>
   </div>
 
   <script src="data.js"></script>
+  <script src="sticker.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

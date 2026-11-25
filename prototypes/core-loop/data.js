@@ -1,72 +1,29 @@
-// 原型用的假数据：可拍的样例照片，以及日历里预置的历史贴纸。
-// 贴纸用 emoji 代替真实抠图；识别结果对应 docs/api.md 的 name / kcal / intro / is_food。
+// 原型数据，逐项对应 iOS 代码。
 
-const SAMPLES = [
-  {
-    id: "rice",
-    label: "盖饭",
-    table: ["#f3d9b5", "#d9a46c"],
-    subjects: [
-      { emoji: "🍛", name: "番茄炒蛋盖饭", kcal: 620, intro: "酸甜番茄裹着嫩滑鸡蛋，浇在白米饭上，家常又下饭。", isFood: true },
-    ],
-  },
-  {
-    id: "noodle",
-    label: "一桌两样",
-    table: ["#e7c9a8", "#b07d55"],
-    subjects: [
-      { emoji: "🍜", name: "红烧牛肉面", kcal: 680, intro: "汤头浓郁，牛肉软烂，面条筋道，一碗下肚很满足。", isFood: true, x: -58, y: -18 },
-      { emoji: "🥟", name: "煎饺", kcal: 320, intro: "底部煎得金黄酥脆，里面是多汁的猪肉白菜馅。", isFood: true, x: 64, y: 38, size: 64 },
-    ],
-  },
-  {
-    id: "cake",
-    label: "甜点",
-    table: ["#f6d5d5", "#d69a9f"],
-    subjects: [
-      { emoji: "🍰", name: "草莓奶油蛋糕", kcal: 380, intro: "松软蛋糕胚夹着淡奶油和新鲜草莓，甜而不腻。", isFood: true },
-    ],
-  },
-  {
-    id: "tea",
-    label: "奶茶",
-    table: ["#e9dcc7", "#a88763"],
-    subjects: [
-      { emoji: "🧋", name: "珍珠奶茶", kcal: 450, intro: "热量主要看糖度和珍珠，这里按常规全糖大杯粗估。", isFood: true },
-    ],
-  },
-  {
-    id: "cat",
-    label: "不是吃的",
-    table: ["#d9e2d0", "#93a782"],
-    subjects: [
-      { emoji: "🐈", name: "一只猫", kcal: null, intro: "看起来是一只正在打盹的橘猫，不能吃哦。", isFood: false },
-    ],
-  },
-  {
-    id: "empty",
-    label: "空桌子",
-    table: ["#e5ddd2", "#b3a596"],
-    subjects: [],
-  },
+// MockFoodAnalyzer.samples（ios/Yumoji/Services/FoodAnalyzing.swift）：
+// 和 iOS 一样，识别结果与照片内容无关，随机取一条。
+const MOCK_SAMPLES = [
+  { name: "番茄炒蛋", kcal: 320, intro: "酸甜开胃的国民家常菜，鸡蛋嫩滑，番茄多汁。", isFood: true },
+  { name: "红烧牛肉面", kcal: 650, intro: "浓郁的红烧汤头配上劲道面条，大块牛肉炖得软烂入味，吃完整个人都暖了。", isFood: true },
+  { name: "抹茶拿铁", kcal: null, intro: "微苦的抹茶遇上绵密奶泡，清爽不腻。", isFood: true },
 ];
+const MOCK_DELAY = 1500; // MockFoodAnalyzer.delay
 
-// 预置历史：相对今天的天数 -> 当天的贴纸
-const HISTORY_SEED = [
-  [1, [["🥐", "可颂", 260], ["🍜", "番茄牛腩面", 640]]],
-  [2, [["🍣", "三文鱼寿司", 420]]],
-  [3, [["🥗", "鸡胸肉沙拉", 350], ["🍙", "饭团", 210], ["🍦", "香草冰淇淋", 190]]],
-  [5, [["🍕", "玛格丽特披萨", 780]]],
-  [6, [["🍔", "芝士牛肉汉堡", 650], ["🍟", "薯条", 380]]],
-  [8, [["🥟", "猪肉白菜饺子", 520]]],
-  [9, [["🍲", "番茄火锅", 900]]],
-  [11, [["🍱", "照烧鸡腿便当", 720]]],
-  [12, [["🥞", "蓝莓松饼", 430], ["☕", "拿铁", 150]]],
-  [15, [["🍝", "肉酱意面", 690]]],
-  [16, [["🌮", "牛肉塔可", 480]]],
-  [19, [["🍛", "咖喱鸡饭", 750], ["🧋", "珍珠奶茶", 450]]],
-  [22, [["🍤", "天妇罗虾", 410]]],
-  [26, [["🥘", "西班牙海鲜饭", 820]]],
-  [33, [["🍰", "提拉米苏", 400]]],
-  [38, [["🍜", "兰州拉面", 600]]],
+// 原型控制里「不是食物」用的结果，对应 is_food = false 的接口返回。
+const NOT_FOOD = { name: "一只猫", kcal: null, intro: "看起来是一只正在打盹的橘猫。", isFood: false };
+
+// FoodAnalysis.introLimit
+const INTRO_LIMIT = 40;
+
+// StickerStyle（ios/Yumoji/Models/StickerStyle.swift）
+const DEFAULT_STYLE = { borderRatio: 0.03, edgeSmoothing: 0.25, marginRatio: 0.02 };
+const STYLE_RANGES = { borderRatio: [0, 0.1], edgeSmoothing: [0, 1], marginRatio: [0, 0.1] };
+
+// 样例照片：桌布 + 盘子 + 食物。食物（emoji）就是抠图要找的主体。
+// 多个食物时和 VisionSubjectLifter 一样合并成一个主体。
+const PHOTOS = [
+  { id: "egg", table: ["#f3d9b5", "#d9a46c"], foods: [{ emoji: "🍳", x: 0, y: 0, size: 440 }] },
+  { id: "noodle", table: ["#e7c9a8", "#b07d55"], foods: [{ emoji: "🍜", x: 0, y: 10, size: 460 }] },
+  { id: "matcha", table: ["#dfe6d2", "#98aa80"], foods: [{ emoji: "🍵", x: 0, y: 0, size: 400 }] },
+  { id: "two", table: ["#efd2c4", "#b9806a"], foods: [{ emoji: "🍜", x: -150, y: -60, size: 340 }, { emoji: "🥟", x: 190, y: 150, size: 230 }] },
 ];
