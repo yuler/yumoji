@@ -1,0 +1,76 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event_name == 'pull_request' && github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  script-tests:
+    name: Script & Release Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+
+      - name: Test release scripts
+        run: node --test .github/scripts/resolve-release.test.mjs
+
+      - name: Check shell scripts syntax
+        run: bash -n scripts/*.sh
+
+  ios-test:
+    name: iOS Test & Build
+    runs-on: macos-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-tags: true
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Prepare unsigned signing config
+        run: cp ios/Signing.xcconfig.example ios/Signing.xcconfig
+
+      - name: Generate Xcode project
+        run: ./scripts/ios-xcodegen.sh
+
+      - name: Run unit tests on iOS Simulator
+        run: |
+          SIM_ID=$(xcrun simctl list devices available iPhone -j | python3 -c '
+          import json, sys
+          data = json.load(sys.stdin)
+          runtimes = sorted(
+              (k for k in data.get("devices", {}) if "SimRuntime.iOS" in k),
+              reverse=True,
+          )
+          for rt in runtimes:
+              for dev in data["devices"][rt]:
+                  if dev.get("isAvailable") and "iPhone" in dev.get("name", ""):
+                      print(dev["udid"])
+                      sys.exit(0)
+          sys.exit(1)
+          ')
+          echo "Using iOS Simulator UDID: $SIM_ID"
+          xcodebuild test \
+            -project ios/Yumoji.xcodeproj \
+            -scheme Yumoji \
+            -configuration Debug \
+            -destination "platform=iOS Simulator,id=$SIM_ID" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO

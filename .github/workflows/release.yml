@@ -1,0 +1,120 @@
+name: Release
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types:
+      - completed
+    branches:
+      - main
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: 'Semver bump type (ignored if explicit version is set)'
+        type: choice
+        default: patch
+        options:
+          - patch
+          - minor
+          - major
+      version:
+        description: 'Explicit version without leading v (e.g. 0.1.0, optional)'
+        type: string
+        required: false
+        default: ''
+      upload_testflight:
+        description: 'Upload build to TestFlight'
+        type: boolean
+        required: false
+        default: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-main
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    name: Plan Release
+    if: >-
+      github.event_name != 'workflow_run' ||
+      (
+        github.event.workflow_run.conclusion == 'success' &&
+        github.event.workflow_run.event == 'push'
+      )
+    runs-on: ubuntu-latest
+    outputs:
+      skip: ${{ steps.resolve.outputs.skip }}
+      version: ${{ steps.resolve.outputs.version }}
+      tag: ${{ steps.resolve.outputs.tag }}
+      create_tag: ${{ steps.resolve.outputs.create_tag }}
+      upload_testflight: ${{ steps.resolve.outputs.upload_testflight }}
+      sha: ${{ steps.resolve.outputs.sha }}
+      bump: ${{ steps.resolve.outputs.bump }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+
+      - name: Resolve release plan
+        id: resolve
+        env:
+          INPUT_BUMP: ${{ inputs.bump || 'patch' }}
+          INPUT_VERSION: ${{ inputs.version || '' }}
+          INPUT_TESTFLIGHT: ${{ inputs.upload_testflight }}
+        run: node .github/scripts/resolve-release.mjs
+
+  tag-release:
+    name: Tag & GitHub Release
+    needs: plan
+    if: needs.plan.outputs.skip != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout target commit
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          ref: ${{ needs.plan.outputs.sha }}
+
+      - name: Create Git Tag and GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ needs.plan.outputs.tag }}
+          TARGET_SHA: ${{ needs.plan.outputs.sha }}
+          CREATE_TAG: ${{ needs.plan.outputs.create_tag }}
+        run: |
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "GitHub Release $TAG already exists."
+          elif [ "$CREATE_TAG" = "true" ]; then
+            gh release create "$TAG" \
+              --target "$TARGET_SHA" \
+              --title "$TAG" \
+              --generate-notes
+          else
+            gh release create "$TAG" \
+              --title "$TAG" \
+              --generate-notes
+          fi
+
+  ios-testflight:
+    name: Upload iOS TestFlight
+    needs: [plan, tag-release]
+    if: needs.plan.outputs.skip != 'true' && needs.plan.outputs.upload_testflight == 'true'
+    uses: ./.github/workflows/ios-release.yml
+    with:
+      version: ${{ needs.plan.outputs.version }}
+      ref: ${{ needs.plan.outputs.sha }}
+    secrets: inherit
