@@ -1,0 +1,26 @@
+# AGENTS.md
+
+Guidelines for coding agents for this repo
+
+## Rules
+
+### Git & PR Workflow
+
+- **PR-first development**: All development must go through Pull Requests (PRs). Work on dedicated feature/bugfix branches; do not push directly to `main`.
+- **Worktree workflow**: When writing code or experimenting with features, always create a new branch in a `git worktree` under `.worktree/` (gitignored) at the repo root. Once the work is done and the PR is opened, remove the worktree immediately.
+- **Commit & PR title format**: `emoji [scope] The main change` — example: `✨ [core] Adopt shared account slug tenancy for personal and team`. PR title follows the exact same format.
+- **No agent trailers**: Do not add agent trailers to commits (`Made-with:`, `Co-Authored-By: Claude`, Cursor, etc.). Message body only when it adds real context.
+- **Auto-PR on completion**: Once a feature or bugfix is implemented and verified (checks/tests pass), commit, push the branch, create a PR, and remove the worktree automatically unless the user explicitly says not to.
+- **Automated trunk release & versioning**: Merge/push to `main` triggers CI to compute the next semver, publish packages, create the `v*` git tag, and open the GitHub Release. Local package manifests (Node.js, Go, Rust) keep a placeholder version (e.g. `0.0.0`); CI injects the real release version at package time.
+
+### Code & Architecture
+
+- **Simplicity first**: Keep everything from design to code as simple as possible. Avoid speculative over-engineering.
+- **File size limit**: Keep each agent-authored file under 5,000 tokens (bytes ÷ 4). Lockfiles and generated code sit outside this limit. Split a file that would cross it by responsibility: one module per concern, helpers and types in a sibling file, and a one-line pointer in the original naming the new path.
+
+### Agent Behavior & Formatting
+
+- **Clarify before assuming**: If something is unclear, ask questions.
+- **Restricted skills**: Do not use superpower or other speculative-driven skills unless explicitly declared.
+- **Table alignment**: Markdown tables must be auto-aligned (pad columns so pipes line up).
+

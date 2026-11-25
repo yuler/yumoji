@@ -1,0 +1,31 @@
+# Mac
+.DS_Store
+
+# Node.js
+node_modules
+dist
+
+# Editor
+.idea
+
+# Logs
+*.log
+*.logs
+
+# Envs
+.env
+.env.*.local
+
+# iOS / Xcode / Build
+ios/*.xcodeproj
+ios/Signing.xcconfig
+.build/
+*.xcarchive
+*.ipa
+
+# Agent worktrees
+.worktree/
+
+# Local todos
+TODO.md
+
