@@ -1,54 +1,61 @@
 import SwiftUI
 import UIKit
 
-/// The warm stage at the top of the result screen. While the cutout runs it
-/// shows the photo with a scan sweep; when the cutout is ready the photo dims
-/// away and the sticker lifts off from where the subject sat.
+/// The photo at the top of the result screen. While the cutout runs, a scan
+/// sweeps the picture. When the subject is ready, scissors trace its outline,
+/// the cut piece flips down into the sticker, and the leftover photo falls away.
 @MainActor
 struct StickerStageView: View {
     let session: StickerSession
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(LanguageManager.self) private var lang
+    @Environment(SoundEffects.self) private var sound
 
+    @State private var containerWidth: CGFloat = UIScreen.main.bounds.width - 40
     @State private var appearedAt = Date()
     @State private var breathing = false
-    @State private var photoDimmed = false
-    @State private var stickerShown = false
-    @State private var popped = false
-    @State private var lifted = false
+    @State private var phase: CutoutRevealPhase = .scanning
+    @State private var cutProgress: CGFloat = 0
+    @State private var fallProgress: CGFloat = 0
     @State private var hasRevealed = false
+    @State private var player = StageSoundPlayer()
 
-    /// The scan sweep always runs at least this long, so a fast cutout still reads as one.
+    /// The scan always runs at least this long, so a fast cutout still reads as one.
     private let minimumScan: TimeInterval = 0.9
-    private let stagePadding: CGFloat = 24
+    private let cutDuration: TimeInterval = 0.45
+    private let fallDuration: TimeInterval = 0.4
 
     var body: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .fill(YumojiTheme.stage)
-
+        Group {
             if isProblem {
                 problemContent
-                    .padding(stagePadding)
-                    .transition(.opacity)
-            } else {
-                GeometryReader { proxy in
-                    let available = CGSize(
-                        width: max(proxy.size.width - 2 * stagePadding, 0),
-                        height: max(proxy.size.height - 2 * stagePadding, 0)
-                    )
-                    ZStack {
-                        photoLayer
-                        stickerLayer(available: available)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 28)
+            } else if let photo = session.photoImage {
+                let size = StageLayout.frame(image: pixelSize(of: photo), containerWidth: containerWidth)
+                CutoutRevealView(
+                    photo: photo,
+                    sticker: session.sticker,
+                    contour: session.subjectContour,
+                    outsideMask: session.outsideMask,
+                    start: startPose(available: size, photo: photo),
+                    phase: phase,
+                    cutProgress: cutProgress,
+                    fallProgress: fallProgress,
+                    breathing: breathing,
+                    sweeps: !reduceMotion
+                )
+                .frame(maxWidth: .infinity)
+                .frame(height: size.height)
+                .background {
+                    GeometryReader { proxy in
+                        Color.clear.preference(key: StageWidthKey.self, value: proxy.size.width)
                     }
-                    .frame(width: available.width, height: available.height)
-                    .padding(stagePadding)
                 }
+                .onPreferenceChange(StageWidthKey.self) { containerWidth = $0 }
             }
         }
-        .frame(maxWidth: .infinity)
-        .frame(height: 360)
         .animation(.easeOut(duration: 0.25), value: isProblem)
         .task(id: session.cutout) {
             if session.cutout == .ready {
@@ -56,6 +63,7 @@ struct StickerStageView: View {
             }
         }
         .onAppear {
+            appearedAt = Date()
             if !reduceMotion {
                 withAnimation(.easeInOut(duration: 0.9).repeatForever(autoreverses: true)) {
                     breathing = true
@@ -71,53 +79,14 @@ struct StickerStageView: View {
         }
     }
 
-    // MARK: - Layers
-
-    @ViewBuilder
-    private var photoLayer: some View {
-        if let photo = session.photoImage {
-            Image(uiImage: photo)
-                .resizable()
-                .scaledToFit()
-                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                .overlay {
-                    if !photoDimmed && !reduceMotion {
-                        ScanSweep()
-                            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                    }
-                }
-                .scaleEffect(breathing ? 1.02 : 1)
-                .brightness(photoDimmed ? -0.35 : 0)
-                .opacity(photoDimmed ? 0 : 1)
-        }
+    private func pixelSize(of photo: UIImage) -> CGSize {
+        CGSize(width: photo.size.width * photo.scale, height: photo.size.height * photo.scale)
     }
 
-    @ViewBuilder
-    private func stickerLayer(available: CGSize) -> some View {
-        if let sticker = session.sticker {
-            let start = startPose(available: available)
-            let atRest = popped || reduceMotion
-            Image(uiImage: sticker)
-                .resizable()
-                .scaledToFit()
-                .shadow(
-                    color: YumojiTheme.shadow.opacity(atRest ? 1 : 0),
-                    radius: 10,
-                    x: 0,
-                    y: 6
-                )
-                .rotationEffect(.degrees(atRest ? 0 : -3))
-                .scaleEffect((atRest ? 1 : start.scale) * (lifted ? 1.08 : 1))
-                .offset(atRest ? .zero : start.offset)
-                .opacity(stickerShown ? 1 : 0)
-        }
-    }
-
-    private func startPose(available: CGSize) -> RevealGeometry.Start {
-        guard let photo = session.photoImage,
-              let crop = session.stickerCrop,
+    private func startPose(available: CGSize, photo: UIImage) -> RevealGeometry.Start {
+        guard let crop = session.stickerCrop,
               let start = RevealGeometry.start(
-                  photo: CGSize(width: photo.size.width * photo.scale, height: photo.size.height * photo.scale),
+                  photo: pixelSize(of: photo),
                   crop: crop,
                   available: available
               )
@@ -125,57 +94,60 @@ struct StickerStageView: View {
         return start
     }
 
-    // MARK: - Reveal
-
     private func reveal() async {
         guard !hasRevealed else { return }
-
-        let haptic = UIImpactFeedbackGenerator(style: .medium)
-        haptic.prepare()
-
         let remaining = minimumScan - Date().timeIntervalSince(appearedAt)
         if remaining > 0 {
             try? await Task.sleep(for: .seconds(remaining))
         }
         guard !Task.isCancelled else { return }
         hasRevealed = true
+        player.prepare()
 
         if reduceMotion {
-            withAnimation(.easeInOut(duration: 0.3)) {
-                photoDimmed = true
-                stickerShown = true
-            }
-            haptic.impactOccurred()
+            phase = .settled
+            land()
             return
         }
 
-        // The sticker appears over the photo, exactly on the subject.
-        var instant = Transaction()
-        instant.disablesAnimations = true
-        withTransaction(instant) {
-            stickerShown = true
-        }
-        withAnimation(.easeOut(duration: 0.2)) {
-            breathing = false
-        }
-        withAnimation(.easeOut(duration: 0.35)) {
-            photoDimmed = true
-        }
-        withAnimation(.spring(response: 0.55, dampingFraction: 0.6)) {
-            popped = true
-        }
-        withAnimation(.easeOut(duration: 0.18)) {
-            lifted = true
+        let haptic = UIImpactFeedbackGenerator(style: .medium)
+        let hasOutline = session.subjectContour.count >= 3
+        if hasOutline {
+            phase = .cutting
+            if sound.isEnabled {
+                player.playPaperCut()
+            }
+            withAnimation(.linear(duration: cutDuration)) {
+                cutProgress = 1
+            }
+            try? await Task.sleep(for: .seconds(cutDuration))
+            guard !Task.isCancelled else { return }
         }
 
-        try? await Task.sleep(for: .milliseconds(180))
+        phase = .falling
+        if !hasOutline, sound.isEnabled {
+            player.playPaperCut()
+        }
+        haptic.prepare()
+        withAnimation(.easeIn(duration: fallDuration)) {
+            fallProgress = 1
+        }
+        try? await Task.sleep(for: .seconds(fallDuration))
+        guard !Task.isCancelled else { return }
+        phase = .settled
         haptic.impactOccurred()
-        withAnimation(.spring(response: 0.4, dampingFraction: 0.55)) {
-            lifted = false
+        if sound.isEnabled {
+            player.playDong()
         }
     }
 
-    // MARK: - Problem
+    private func land() {
+        let haptic = UIImpactFeedbackGenerator(style: .medium)
+        haptic.impactOccurred()
+        if sound.isEnabled {
+            player.playDong()
+        }
+    }
 
     @ViewBuilder
     private var problemContent: some View {
@@ -233,29 +205,9 @@ struct StickerStageView: View {
     }
 }
 
-/// A soft diagonal highlight that loops across whatever it overlays.
-private struct ScanSweep: View {
-    private let period: TimeInterval = 0.9
-
-    var body: some View {
-        TimelineView(.animation) { context in
-            let time = context.date.timeIntervalSinceReferenceDate
-            let progress = (time / period).truncatingRemainder(dividingBy: 1)
-            GeometryReader { proxy in
-                ZStack {
-                    LinearGradient(
-                        colors: [.clear, .white.opacity(0.55), .clear],
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    )
-                    .frame(width: proxy.size.width * 0.45, height: proxy.size.height * 1.8)
-                    .rotationEffect(.degrees(20))
-                    .offset(x: (progress - 0.5) * proxy.size.width * 1.6)
-                    .blendMode(.plusLighter)
-                }
-                .frame(width: proxy.size.width, height: proxy.size.height)
-            }
-        }
-        .allowsHitTesting(false)
+private struct StageWidthKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
     }
 }
