@@ -190,6 +190,27 @@ test("manual workflow_dispatch supports bump, explicit version, and testflight m
   }
 });
 
+test("push to main plans an automatic release", () => {
+  const repo = createRepo();
+  try {
+    repo.commitFile("ios/Yumoji/YumojiApp.swift", "// v1\n", "✨ [ios] Initial app");
+
+    const plan = resolveReleasePlan({
+      cwd: repo.dir,
+      eventName: "push",
+      refName: "main",
+    });
+    assert.equal(plan.skip, false);
+    assert.equal(plan.version, "0.0.1");
+    assert.equal(plan.tag, "v0.0.1");
+    assert.equal(plan.createTag, true);
+    assert.equal(plan.uploadTestflight, true);
+    assert.equal(plan.bump, "patch");
+  } finally {
+    repo.cleanup();
+  }
+});
+
 test("manual tag push reuses existing tag without re-creating it", () => {
   const repo = createRepo();
   try {

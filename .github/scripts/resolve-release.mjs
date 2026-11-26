@@ -172,22 +172,24 @@ export function resolveReleasePlan({
   const mergedTags = listSemverTags(cwd, { mergedRef: sha });
   const baseTag = mergedTags[0] || null;
 
-  // 1. Manual git push of a v* tag
+  // 1. Manual git push of a v* tag. Push to main falls through to automatic release.
   if (eventName === "push") {
     const cleaned = normalizeVersion(refName);
-    if (!isValidVersion(cleaned)) {
+    if (isValidVersion(cleaned)) {
+      return {
+        skip: false,
+        version: cleaned,
+        tag: `v${cleaned}`,
+        createTag: false,
+        uploadTestflight: true,
+        sha,
+        bump: "manual-tag",
+        reason: `manual tag push v${cleaned}`,
+      };
+    }
+    if (refName !== "main") {
       throw new Error(`Invalid release tag: ${refName} (expected vX.Y.Z)`);
     }
-    return {
-      skip: false,
-      version: cleaned,
-      tag: `v${cleaned}`,
-      createTag: false,
-      uploadTestflight: true,
-      sha,
-      bump: "manual-tag",
-      reason: `manual tag push v${cleaned}`,
-    };
   }
 
   // 2. Manual workflow_dispatch
@@ -225,7 +227,7 @@ export function resolveReleasePlan({
     };
   }
 
-  // 3. Automatic release after CI succeeds on push to main (workflow_run)
+  // 3. Automatic release on push to main (legacy workflow_run uses the same path)
   const headSubject = git(["log", "-1", "--format=%s", sha], cwd);
   if (hasSkipRelease(headSubject)) {
     return {
