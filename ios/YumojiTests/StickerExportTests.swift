@@ -7,8 +7,7 @@ import XCTest
 final class StickerExportTests: XCTestCase {
     func testPNGKeepsTransparentPixels() throws {
         let image = try XCTUnwrap(rgbaImage(pixels: [
-            [0, 0, 0, 0],
-            [255, 0, 0, 255],
+            [0, 0, 0, 0, 255, 0, 0, 255],
         ]))
         let data = try XCTUnwrap(StickerPNG.data(from: image))
         let source = try XCTUnwrap(CGImageSourceCreateWithData(data as CFData, nil))

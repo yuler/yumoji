@@ -1,3 +1,4 @@
+import CoreGraphics
 import CoreTransferable
 import SwiftUI
 import UniformTypeIdentifiers
@@ -35,9 +36,9 @@ struct StickerExportBar: View {
             .buttonStyle(.plain)
             .frame(maxWidth: .infinity)
 
-            if let data = pngData {
+            if let cgImage = image.cgImage {
                 ShareLink(
-                    item: StickerPNGFile(data: data),
+                    item: StickerPNGFile(image: cgImage),
                     preview: SharePreview(
                         lang.t("result.share.preview"),
                         image: Image(uiImage: image)
@@ -81,14 +82,10 @@ struct StickerExportBar: View {
         savedImageID == ObjectIdentifier(image)
     }
 
-    private var pngData: Data? {
-        guard let cgImage = image.cgImage else { return nil }
-        return StickerPNG.data(from: cgImage)
-    }
-
     private func save() async {
         guard !isSaving else { return }
-        guard let data = pngData else {
+        let targetID = ObjectIdentifier(image)
+        guard let cgImage = image.cgImage, let data = StickerPNG.data(from: cgImage) else {
             alert = .failed
             return
         }
@@ -96,7 +93,7 @@ struct StickerExportBar: View {
         defer { isSaving = false }
         do {
             try await saver.savePNG(data)
-            savedImageID = ObjectIdentifier(image)
+            savedImageID = targetID
         } catch StickerSaveError.denied {
             alert = .denied
         } catch {
@@ -146,15 +143,18 @@ private enum SaveAlert: Identifiable {
 
 /// A sticker PNG handed to the system share sheet, named `Yumoji.png`.
 struct StickerPNGFile: Transferable {
-    let data: Data
+    let image: CGImage
 
     static var transferRepresentation: some TransferRepresentation {
         FileRepresentation(exportedContentType: .png) { item in
+            guard let data = StickerPNG.data(from: item.image) else {
+                throw StickerSaveError.failed
+            }
             let directory = FileManager.default.temporaryDirectory
                 .appendingPathComponent(UUID().uuidString, isDirectory: true)
             try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
             let url = directory.appendingPathComponent("Yumoji.png")
-            try item.data.write(to: url, options: .atomic)
+            try data.write(to: url, options: .atomic)
             return SentTransferredFile(url)
         }
     }
