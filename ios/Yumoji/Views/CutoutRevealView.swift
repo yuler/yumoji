@@ -15,39 +15,49 @@ struct CutoutRevealView: View {
     let outsideMask: UIImage?
     let start: RevealGeometry.Start
     var phase: CutoutRevealPhase
-    var cutProgress: CGFloat
-    var fallProgress: CGFloat
+    var phaseStartedAt: Date?
+    var cutDuration: TimeInterval
+    var fallDuration: TimeInterval
     var breathing: Bool
     var sweeps: Bool
 
     private let corner: CGFloat = 14
 
     var body: some View {
-        GeometryReader { proxy in
-            let frame = proxy.size
-            let pixels = CGSize(
-                width: photo.size.width * photo.scale,
-                height: photo.size.height * photo.scale
+        TimelineView(.animation(paused: phase != .cutting && phase != .falling)) { context in
+            let timing = RevealTiming.progress(
+                phase: phase,
+                startedAt: phaseStartedAt,
+                now: context.date,
+                cutDuration: cutDuration,
+                fallDuration: fallDuration
             )
-            let fitted = StageLayout.fittedRect(image: pixels, frame: frame)
-            ZStack {
-                if phase == .scanning || phase == .cutting {
-                    photoImage(fitted: fitted, showsSweep: sweeps && phase == .scanning)
-                        .scaleEffect(phase == .scanning && breathing ? 1.02 : 1)
-                        .position(x: fitted.midX, y: fitted.midY)
-                    if phase == .cutting {
-                        cutOverlay(pixels: pixels, fitted: fitted, frame: frame)
+            GeometryReader { proxy in
+                let frame = proxy.size
+                let pixels = CGSize(
+                    width: photo.size.width * photo.scale,
+                    height: photo.size.height * photo.scale
+                )
+                let fitted = StageLayout.fittedRect(image: pixels, frame: frame)
+                ZStack {
+                    if phase == .scanning || phase == .cutting {
+                        photoImage(fitted: fitted, showsSweep: sweeps && phase == .scanning)
+                            .scaleEffect(phase == .scanning && breathing ? 1.02 : 1)
+                            .position(x: fitted.midX, y: fitted.midY)
+                        if phase == .cutting {
+                            cutOverlay(pixels: pixels, fitted: fitted, frame: frame, cutProgress: timing.cut)
+                        }
+                    }
+                    if phase == .falling {
+                        fallingScrap(fitted: fitted, fallProgress: timing.fall)
+                        stickerCard(progress: timing.fall)
+                    }
+                    if phase == .settled {
+                        stickerCard(progress: 1)
                     }
                 }
-                if phase == .falling {
-                    fallingScrap(fitted: fitted)
-                    stickerCard(progress: fallProgress)
-                }
-                if phase == .settled {
-                    stickerCard(progress: 1)
-                }
+                .frame(width: frame.width, height: frame.height)
             }
-            .frame(width: frame.width, height: frame.height)
         }
     }
 
@@ -65,7 +75,7 @@ struct CutoutRevealView: View {
             }
     }
 
-    private func fallingScrap(fitted: CGRect) -> some View {
+    private func fallingScrap(fitted: CGRect, fallProgress: CGFloat) -> some View {
         let travel = fallProgress * fitted.height * 0.85
         return photoImage(fitted: fitted, showsSweep: false)
             .mask { scrapMask(fitted: fitted) }
@@ -112,7 +122,7 @@ struct CutoutRevealView: View {
             .offset(offset)
     }
 
-    private func cutOverlay(pixels: CGSize, fitted: CGRect, frame: CGSize) -> some View {
+    private func cutOverlay(pixels: CGSize, fitted: CGRect, frame: CGSize, cutProgress: CGFloat) -> some View {
         let points = contour.map { StageLayout.map($0, image: pixels, fitted: fitted) }
         return ZStack {
             Canvas { context, _ in

@@ -98,7 +98,7 @@ final class CutoutAnimationTests: XCTestCase {
         XCTAssertNil(ContourPath.sample(points: [], progress: 0.5))
     }
 
-    func testOutsideMaskPunchesOutTheSubject() {
+    func testOutsideMaskPunchesOutTheSubject() throws {
         let mask = TestImages.circleMask(width: 100, height: 100, centerX: 50, centerY: 50, radius: 20)
         let bitmap = OutsideMask.bitmap(width: mask.width, height: mask.height, pixels: mask.pixels, maxSide: 320)
         let image = try XCTUnwrap(bitmap)
@@ -122,6 +122,68 @@ final class CutoutAnimationTests: XCTestCase {
             }
             XCTAssertGreaterThan(energy, 0)
         }
+    }
+
+    func testRevealTimingStartsAtZeroAndEasesIn() {
+        let start = Date(timeIntervalSinceReferenceDate: 100)
+        let scanning = RevealTiming.progress(
+            phase: .scanning,
+            startedAt: start,
+            now: start.addingTimeInterval(1),
+            cutDuration: 0.45,
+            fallDuration: 0.4
+        )
+        XCTAssertEqual(scanning.cut, 0)
+        XCTAssertEqual(scanning.fall, 0)
+
+        let cuttingStart = RevealTiming.progress(
+            phase: .cutting,
+            startedAt: start,
+            now: start,
+            cutDuration: 0.45,
+            fallDuration: 0.4
+        )
+        XCTAssertEqual(cuttingStart.cut, 0, accuracy: 0.0001)
+        XCTAssertEqual(cuttingStart.fall, 0)
+
+        let cuttingMid = RevealTiming.progress(
+            phase: .cutting,
+            startedAt: start,
+            now: start.addingTimeInterval(0.225),
+            cutDuration: 0.45,
+            fallDuration: 0.4
+        )
+        XCTAssertEqual(cuttingMid.cut, 0.5, accuracy: 0.0001)
+
+        let cuttingDone = RevealTiming.progress(
+            phase: .cutting,
+            startedAt: start,
+            now: start.addingTimeInterval(1),
+            cutDuration: 0.45,
+            fallDuration: 0.4
+        )
+        XCTAssertEqual(cuttingDone.cut, 1)
+        XCTAssertEqual(cuttingDone.fall, 0)
+
+        let fallingMid = RevealTiming.progress(
+            phase: .falling,
+            startedAt: start,
+            now: start.addingTimeInterval(0.2),
+            cutDuration: 0.45,
+            fallDuration: 0.4
+        )
+        XCTAssertEqual(fallingMid.cut, 1)
+        XCTAssertEqual(fallingMid.fall, 0.125, accuracy: 0.0001)
+
+        let settled = RevealTiming.progress(
+            phase: .settled,
+            startedAt: start,
+            now: start,
+            cutDuration: 0.45,
+            fallDuration: 0.4
+        )
+        XCTAssertEqual(settled.cut, 1)
+        XCTAssertEqual(settled.fall, 1)
     }
 
     private func fill(_ pixels: inout [UInt8], width: Int, rect: CGRect) {

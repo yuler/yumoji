@@ -16,8 +16,7 @@ struct StickerStageView: View {
     @State private var appearedAt = Date()
     @State private var breathing = false
     @State private var phase: CutoutRevealPhase = .scanning
-    @State private var cutProgress: CGFloat = 0
-    @State private var fallProgress: CGFloat = 0
+    @State private var phaseStartedAt: Date?
     @State private var hasRevealed = false
     @State private var player = StageSoundPlayer()
 
@@ -41,8 +40,9 @@ struct StickerStageView: View {
                     outsideMask: session.outsideMask,
                     start: startPose(available: size, photo: photo),
                     phase: phase,
-                    cutProgress: cutProgress,
-                    fallProgress: fallProgress,
+                    phaseStartedAt: phaseStartedAt,
+                    cutDuration: cutDuration,
+                    fallDuration: fallDuration,
                     breathing: breathing,
                     sweeps: !reduceMotion
                 )
@@ -102,7 +102,9 @@ struct StickerStageView: View {
         }
         guard !Task.isCancelled else { return }
         hasRevealed = true
-        player.prepare()
+        if sound.isEnabled {
+            player.prepare()
+        }
 
         if reduceMotion {
             phase = .settled
@@ -113,25 +115,21 @@ struct StickerStageView: View {
         let haptic = UIImpactFeedbackGenerator(style: .medium)
         let hasOutline = session.subjectContour.count >= 3
         if hasOutline {
+            phaseStartedAt = Date()
             phase = .cutting
             if sound.isEnabled {
                 player.playPaperCut()
-            }
-            withAnimation(.linear(duration: cutDuration)) {
-                cutProgress = 1
             }
             try? await Task.sleep(for: .seconds(cutDuration))
             guard !Task.isCancelled else { return }
         }
 
+        phaseStartedAt = Date()
         phase = .falling
         if !hasOutline, sound.isEnabled {
             player.playPaperCut()
         }
         haptic.prepare()
-        withAnimation(.easeIn(duration: fallDuration)) {
-            fallProgress = 1
-        }
         try? await Task.sleep(for: .seconds(fallDuration))
         guard !Task.isCancelled else { return }
         phase = .settled
