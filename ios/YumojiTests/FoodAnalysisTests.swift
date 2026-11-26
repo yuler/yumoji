@@ -53,17 +53,25 @@ final class FoodAnalysisTests: XCTestCase {
         XCTAssertEqual(FoodAnalysis.formatKcal(1280), "约 1280 千卡")
         XCTAssertEqual(FoodAnalysis.formatKcal(0), "约 0 千卡")
         XCTAssertEqual(FoodAnalysis.formatKcal(-5), "约 0 千卡")
+
+        XCTAssertEqual(FoodAnalysis.formatKcal(320, language: .english), "~320 kcal")
+        XCTAssertEqual(FoodAnalysis.formatKcal(1280, language: .english), "~1280 kcal")
+        XCTAssertEqual(FoodAnalysis.formatKcal(0, language: .english), "~0 kcal")
+        XCTAssertEqual(FoodAnalysis.formatKcal(-5, language: .english), "~0 kcal")
     }
 
     func testKcalTextIsHiddenWithoutAnEstimate() {
         let known = FoodAnalysis(name: "番茄炒蛋", kcal: 320, intro: "家常菜。", isFood: true)
         XCTAssertEqual(known.kcalText, "约 320 千卡")
+        XCTAssertEqual(known.kcalText(language: .english), "~320 kcal")
 
         let unknown = FoodAnalysis(name: "抹茶拿铁", kcal: nil, intro: "一杯拿铁。", isFood: true)
         XCTAssertNil(unknown.kcalText)
+        XCTAssertNil(unknown.kcalText(language: .english))
 
         let notFood = FoodAnalysis(name: "键盘", kcal: 0, intro: "不能吃。", isFood: false)
         XCTAssertNil(notFood.kcalText)
+        XCTAssertNil(notFood.kcalText(language: .english))
     }
 
     func testDisplayIntroIsCutToTheLimit() {
@@ -76,11 +84,25 @@ final class FoodAnalysisTests: XCTestCase {
     }
 
     func testMockSamplesRespectTheContract() {
-        XCTAssertFalse(MockFoodAnalyzer.samples.isEmpty)
-        for sample in MockFoodAnalyzer.samples {
-            XCTAssertFalse(sample.name.isEmpty)
-            XCTAssertFalse(sample.intro.isEmpty)
-            XCTAssertLessThanOrEqual(sample.intro.count, FoodAnalysis.introLimit)
+        for language in [ResolvedLanguage.zhHans, .english] {
+            let samples = MockFoodAnalyzer.samples(for: language)
+            XCTAssertFalse(samples.isEmpty)
+            for sample in samples {
+                XCTAssertFalse(sample.name.isEmpty)
+                XCTAssertFalse(sample.intro.isEmpty)
+                XCTAssertLessThanOrEqual(sample.intro.count, FoodAnalysis.introLimit)
+            }
         }
+    }
+
+    func testMockAnalyzerReturnsLocalizedSamples() async throws {
+        let analyzer = MockFoodAnalyzer(delay: .zero)
+        let image = TestImages.solid(width: 8, height: 8, color: RGB(r: 255, g: 200, b: 150))
+
+        let zhResult = try await analyzer.analyze(image, language: .zhHans)
+        XCTAssertTrue(MockFoodAnalyzer.samples.contains(zhResult))
+
+        let enResult = try await analyzer.analyze(image, language: .english)
+        XCTAssertTrue(MockFoodAnalyzer.englishSamples.contains(enResult))
     }
 }

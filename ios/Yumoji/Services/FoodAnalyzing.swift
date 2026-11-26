@@ -10,7 +10,13 @@ enum FoodAnalysisError: Error {
 /// uploading `UploadImage.jpegData(from:)`.
 protocol FoodAnalyzing: Sendable {
     /// - Parameter photo: The original photo, upright (not the sticker).
-    func analyze(_ photo: CGImage) async throws -> FoodAnalysis
+    func analyze(_ photo: CGImage, language: ResolvedLanguage) async throws -> FoodAnalysis
+}
+
+extension FoodAnalyzing {
+    func analyze(_ photo: CGImage) async throws -> FoodAnalysis {
+        try await analyze(photo, language: .zhHans)
+    }
 }
 
 /// Stand-in until the backend exists: waits a moment, then returns canned data.
@@ -36,10 +42,41 @@ struct MockFoodAnalyzer: FoodAnalyzing {
         ),
     ]
 
+    static let englishSamples: [FoodAnalysis] = [
+        FoodAnalysis(
+            name: "Tomato & Egg Stir-Fry",
+            kcal: 320,
+            intro: "Silky eggs with sweet-tangy tomatoes.",
+            isFood: true
+        ),
+        FoodAnalysis(
+            name: "Braised Beef Noodle Soup",
+            kcal: 650,
+            intro: "Rich braised broth and tender beef.",
+            isFood: true
+        ),
+        FoodAnalysis(
+            name: "Matcha Latte",
+            kcal: nil,
+            intro: "Earthy matcha topped with creamy foam.",
+            isFood: true
+        ),
+    ]
+
+    static func samples(for language: ResolvedLanguage) -> [FoodAnalysis] {
+        switch language {
+        case .zhHans:
+            return samples
+        case .english:
+            return englishSamples
+        }
+    }
+
     var delay: Duration = .milliseconds(1500)
 
-    func analyze(_ photo: CGImage) async throws -> FoodAnalysis {
+    func analyze(_ photo: CGImage, language: ResolvedLanguage) async throws -> FoodAnalysis {
         try await Task.sleep(for: delay)
-        return MockFoodAnalyzer.samples.randomElement() ?? MockFoodAnalyzer.samples[0]
+        let pool = MockFoodAnalyzer.samples(for: language)
+        return pool.randomElement() ?? pool[0]
     }
 }

@@ -4,10 +4,13 @@ import UIKit
 
 @MainActor
 struct HomeView: View {
+    let appVersion: String
     /// Asks the parent to present the camera; it outlives this screen.
     let onOpenCamera: () -> Void
     let onPhoto: (PhotoInput) -> Void
+    let onOpenSettings: () -> Void
 
+    @Environment(LanguageManager.self) private var lang
     @State private var pickerItem: PhotosPickerItem?
 
     /// False in the simulator and on devices without a camera.
@@ -17,6 +20,21 @@ struct HomeView: View {
 
     var body: some View {
         VStack(spacing: 0) {
+            HStack {
+                Spacer()
+
+                Button(action: onOpenSettings) {
+                    Image(systemName: "gearshape")
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundStyle(YumojiTheme.ink)
+                        .frame(width: 36, height: 36)
+                        .background(YumojiTheme.surfaceSecondary)
+                        .clipShape(Circle())
+                }
+                .accessibilityLabel(lang.t("home.settings"))
+            }
+            .padding(.top, 10)
+
             Spacer()
 
             Text("🍙")
@@ -27,9 +45,10 @@ struct HomeView: View {
                 .font(YumojiTheme.rounded(40, weight: .bold))
                 .foregroundStyle(YumojiTheme.ink)
 
-            Text("把每一口好吃的，收成一枚贴纸")
+            Text(lang.t("home.tagline"))
                 .font(YumojiTheme.rounded(15))
                 .foregroundStyle(YumojiTheme.inkSoft)
+                .multilineTextAlignment(.center)
                 .padding(.top, 8)
 
             Spacer()
@@ -38,22 +57,35 @@ struct HomeView: View {
                 Button {
                     onOpenCamera()
                 } label: {
-                    actionLabel("拍一张", systemImage: "camera.fill", filled: true)
+                    actionLabel(lang.t("home.take_photo"), systemImage: "camera.fill", filled: true)
                 }
                 .disabled(!cameraAvailable)
                 .opacity(cameraAvailable ? 1 : 0.45)
 
                 PhotosPicker(selection: $pickerItem, matching: .images) {
-                    actionLabel("从相册选一张", systemImage: "photo.on.rectangle", filled: false)
+                    actionLabel(lang.t("home.pick_from_library"), systemImage: "photo.on.rectangle", filled: false)
                 }
 
                 if !cameraAvailable {
-                    Text("这台设备没有可用的相机，请从相册选择")
+                    Text(lang.t("home.camera_unavailable"))
                         .font(YumojiTheme.rounded(12))
                         .foregroundStyle(YumojiTheme.inkSoft)
+                        .multilineTextAlignment(.center)
                 }
             }
-            .padding(.bottom, 28)
+            .padding(.bottom, 12)
+
+            Button(action: onOpenSettings) {
+                Text(lang.t("home.version", appVersion))
+                    .font(.system(size: 12))
+                    .foregroundStyle(YumojiTheme.inkSoft)
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, 6)
+                    .padding(.bottom, 12)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(lang.t("home.version_accessibility", appVersion))
         }
         .padding(.horizontal, 28)
         .frame(maxWidth: .infinity, maxHeight: .infinity)

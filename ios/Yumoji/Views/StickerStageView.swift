@@ -9,6 +9,7 @@ struct StickerStageView: View {
     let session: StickerSession
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(LanguageManager.self) private var lang
 
     @State private var appearedAt = Date()
     @State private var breathing = false
@@ -181,13 +182,27 @@ struct StickerStageView: View {
         switch session.cutout {
         case .noSubject:
             problem(
-                title: "没找到可以做成贴纸的食物",
-                detail: "换个角度，或者让食物在画面里更突出一些。"
+                title: lang.t("stage.no_subject.title"),
+                detail: lang.t("stage.no_subject.detail")
             )
-        case .failed(let message):
-            problem(title: "抠图没有成功", detail: message)
+        case .failed(let failure):
+            problem(
+                title: lang.t("stage.failed.title"),
+                detail: failureDetail(failure)
+            )
         case .working, .ready:
             EmptyView()
+        }
+    }
+
+    private func failureDetail(_ failure: CutoutFailure) -> String {
+        switch failure {
+        case .unreadablePhoto:
+            return lang.t("stage.failed.unreadable_photo")
+        case .composeFailed:
+            return lang.t("stage.failed.compose_failed")
+        case .message(let text):
+            return text
         }
     }
 
@@ -198,6 +213,7 @@ struct StickerStageView: View {
             Text(title)
                 .font(YumojiTheme.rounded(17, weight: .semibold))
                 .foregroundStyle(YumojiTheme.ink)
+                .multilineTextAlignment(.center)
             Text(detail)
                 .font(YumojiTheme.rounded(13))
                 .foregroundStyle(YumojiTheme.inkSoft)
@@ -205,7 +221,7 @@ struct StickerStageView: View {
             Button {
                 session.reset()
             } label: {
-                Text("换一张照片")
+                Text(lang.t("stage.pick_another"))
                     .font(YumojiTheme.rounded(15, weight: .semibold))
                     .foregroundStyle(Color.white)
                     .padding(.horizontal, 22)

@@ -10,11 +10,17 @@ enum PhotoInput {
     case library(PhotosPickerItem)
 }
 
+enum CutoutFailure: Equatable {
+    case unreadablePhoto
+    case composeFailed
+    case message(String)
+}
+
 enum CutoutState: Equatable {
     case working
     case ready
     case noSubject
-    case failed(String)
+    case failed(CutoutFailure)
 }
 
 enum AnalysisState: Equatable {
@@ -40,12 +46,13 @@ final class StickerSession {
     private(set) var subjectLongSide = 0
 
     var style = StickerStyle()
-    /// Debug switch: makes the next analysis fail so the `待识别` state can be seen.
+    /// Debug switch: makes the next analysis fail so the failed state can be seen.
     var simulateAnalysisFailure = false
 
     private let lifter: any SubjectLifting
     private let analyzer: any FoodAnalyzing
 
+    @ObservationIgnored private var analysisLanguage: ResolvedLanguage = .zhHans
     @ObservationIgnored private var photo: CGImage?
     @ObservationIgnored private var mask: SubjectMask?
     @ObservationIgnored private var pipelineTask: Task<Void, Never>?
@@ -62,8 +69,9 @@ final class StickerSession {
         self.analyzer = analyzer
     }
 
-    func start(_ input: PhotoInput) {
+    func start(_ input: PhotoInput, language: ResolvedLanguage = .zhHans) {
         reset()
+        analysisLanguage = language
         isActive = true
         pipelineTask = Task {
             await self.run(input)
@@ -88,7 +96,10 @@ final class StickerSession {
         isActive = false
     }
 
-    func retryAnalysis() {
+    func retryAnalysis(language: ResolvedLanguage? = nil) {
+        if let language {
+            analysisLanguage = language
+        }
         startAnalysis()
     }
 
@@ -103,7 +114,7 @@ final class StickerSession {
         let decoded = await loadPhoto(input)
         guard !Task.isCancelled else { return }
         guard let loaded = decoded else {
-            cutout = .failed("这张照片读不出来")
+            cutout = .failed(.unreadablePhoto)
             return
         }
 
@@ -127,7 +138,7 @@ final class StickerSession {
         } catch {
             guard !Task.isCancelled else { return }
             analysisTask?.cancel()
-            cutout = .failed(error.localizedDescription)
+            cutout = .failed(.message(error.localizedDescription))
         }
     }
 
@@ -154,9 +165,10 @@ final class StickerSession {
         guard let currentPhoto = photo else { return }
         analysis = .loading
         let shouldFail = simulateAnalysisFailure
+        let language = analysisLanguage
         analysisTask = Task {
             do {
-                let result = try await self.analyzer.analyze(currentPhoto)
+                let result = try await self.analyzer.analyze(currentPhoto, language: language)
                 guard !Task.isCancelled else { return }
                 if shouldFail {
                     throw FoodAnalysisError.unavailable
@@ -199,7 +211,7 @@ final class StickerSession {
                 sticker = UIImage(cgImage: rendered)
                 cutout = .ready
             } else if sticker == nil {
-                cutout = .failed("贴纸合成失败")
+                cutout = .failed(.composeFailed)
             }
         }
         isRendering = false

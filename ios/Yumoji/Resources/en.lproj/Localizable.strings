@@ -1,0 +1,57 @@
+/* Home */
+"home.tagline" = "Every yummy bite, a sticker.";
+"home.take_photo" = "Take a Photo";
+"home.pick_from_library" = "Choose from Library";
+"home.camera_unavailable" = "Camera is unavailable on this device. Choose from Library instead.";
+"home.settings" = "Settings";
+"home.version" = "Version %@";
+"home.version_accessibility" = "Version %@, open Settings";
+
+/* Result */
+"result.another" = "Another";
+
+/* Stage */
+"stage.no_subject.title" = "Couldn't find food to turn into a sticker";
+"stage.no_subject.detail" = "Try another angle or make the dish stand out more.";
+"stage.failed.title" = "Cutout failed";
+"stage.failed.unreadable_photo" = "Unable to read this photo.";
+"stage.failed.compose_failed" = "Couldn't compose the sticker.";
+"stage.pick_another" = "Pick Another Photo";
+
+/* Analysis */
+"analysis.loading" = "Figuring out what's on your plate…";
+"analysis.failed" = "Not Identified";
+"analysis.retry" = "Retry";
+"analysis.not_food" = "Doesn't look like food";
+
+/* Tuning */
+"tuning.title" = "Debug · Sticker Parameters";
+"tuning.border_ratio" = "Border Width (borderRatio)";
+"tuning.edge_smoothing" = "Edge Smoothing (edgeSmoothing)";
+"tuning.margin_ratio" = "Transparent Margin (marginRatio)";
+"tuning.summary.subject" = "Subject %d px · Border %.1f px";
+"tuning.summary.sticker" = "Sticker %d × %d px";
+"tuning.simulate_failure" = "Simulate failure on next analysis";
+"tuning.reset_defaults" = "Reset Defaults";
+"tuning.reanalyze" = "Re-analyze";
+
+/* Settings */
+"settings.title" = "Settings";
+"settings.done" = "Done";
+"settings.section.general" = "General";
+"settings.appearance" = "Appearance";
+"settings.appearance.system" = "Follow System";
+"settings.appearance.light" = "Light";
+"settings.appearance.dark" = "Dark";
+"settings.language" = "Language";
+"settings.language.system" = "Follow System";
+"settings.section.about" = "About";
+"settings.version.label" = "Version";
+"settings.update.check" = "Check for Updates";
+"settings.update.checking" = "Checking for updates…";
+"settings.update.up_to_date" = "You're up to date";
+"settings.update.failed" = "Unable to check for updates right now";
+"settings.update.store_link_missing" = "Version %@ is available, but the App Store link isn't configured yet";
+"settings.update.available" = "Version %@ is available";
+"settings.update.open_app_store" = "Open App Store";
+"settings.update.open_testflight" = "Open TestFlight";
