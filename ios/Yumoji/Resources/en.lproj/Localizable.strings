@@ -4,6 +4,8 @@
 "home.pick_from_library" = "Choose from Library";
 "home.camera_unavailable" = "Camera is unavailable on this device. Choose from Library instead.";
 "home.settings" = "Settings";
+"home.version" = "Version %@";
+"home.version_accessibility" = "Version %@, open Settings";
 
 /* Result */
 "result.another" = "Another";
@@ -43,3 +45,13 @@
 "settings.appearance.dark" = "Dark";
 "settings.language" = "Language";
 "settings.language.system" = "Follow System";
+"settings.section.about" = "About";
+"settings.version.label" = "Version";
+"settings.update.check" = "Check for Updates";
+"settings.update.checking" = "Checking for updates…";
+"settings.update.up_to_date" = "You're up to date";
+"settings.update.failed" = "Unable to check for updates right now";
+"settings.update.store_link_missing" = "Version %@ is available, but the App Store link isn't configured yet";
+"settings.update.available" = "Version %@ is available";
+"settings.update.open_app_store" = "Open App Store";
+"settings.update.open_testflight" = "Open TestFlight";

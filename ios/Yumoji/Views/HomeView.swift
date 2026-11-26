@@ -4,6 +4,7 @@ import UIKit
 
 @MainActor
 struct HomeView: View {
+    let appVersion: String
     /// Asks the parent to present the camera; it outlives this screen.
     let onOpenCamera: () -> Void
     let onPhoto: (PhotoInput) -> Void
@@ -72,7 +73,19 @@ struct HomeView: View {
                         .multilineTextAlignment(.center)
                 }
             }
-            .padding(.bottom, 28)
+            .padding(.bottom, 12)
+
+            Button(action: onOpenSettings) {
+                Text(lang.t("home.version", appVersion))
+                    .font(.system(size: 12))
+                    .foregroundStyle(YumojiTheme.inkSoft)
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, 6)
+                    .padding(.bottom, 12)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(lang.t("home.version_accessibility", appVersion))
         }
         .padding(.horizontal, 28)
         .frame(maxWidth: .infinity, maxHeight: .infinity)

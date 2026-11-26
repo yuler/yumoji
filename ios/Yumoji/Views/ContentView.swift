@@ -19,6 +19,7 @@ struct ContentView: View {
                 ResultView(session: session)
             } else {
                 HomeView(
+                    appVersion: AppUpdate.marketingVersion(),
                     onOpenCamera: {
                         showCamera = true
                     },
@@ -44,9 +45,12 @@ struct ContentView: View {
             .ignoresSafeArea()
         }
         .sheet(isPresented: $showSettings) {
-            SettingsSheetView()
-                .environment(\.locale, lang.locale)
-                .preferredColorScheme(themeManager.selection.preferredColorScheme)
+            SettingsSheetView(
+                appVersion: AppUpdate.marketingVersion(),
+                installChannel: AppUpdate.channel()
+            )
+            .environment(\.locale, lang.locale)
+            .preferredColorScheme(themeManager.selection.preferredColorScheme)
         }
         .task {
             lang.refreshSystemLanguages()
