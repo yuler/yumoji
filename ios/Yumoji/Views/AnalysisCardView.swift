@@ -6,6 +6,8 @@ struct AnalysisCardView: View {
     let state: AnalysisState
     let onRetry: () -> Void
 
+    @Environment(LanguageManager.self) private var lang
+
     var body: some View {
         content
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -19,7 +21,7 @@ struct AnalysisCardView: View {
         case .loading:
             HStack(spacing: 10) {
                 ProgressView()
-                Text("正在认这是什么好吃的…")
+                Text(lang.t("analysis.loading"))
                     .font(YumojiTheme.rounded(14))
                     .foregroundStyle(YumojiTheme.inkSoft)
             }
@@ -27,14 +29,14 @@ struct AnalysisCardView: View {
             details(analysis)
         case .failed:
             HStack {
-                Text("待识别")
+                Text(lang.t("analysis.failed"))
                     .font(YumojiTheme.rounded(20, weight: .bold))
                     .foregroundStyle(YumojiTheme.inkSoft)
                 Spacer()
                 Button {
                     onRetry()
                 } label: {
-                    Label("重试", systemImage: "arrow.clockwise")
+                    Label(lang.t("analysis.retry"), systemImage: "arrow.clockwise")
                         .font(YumojiTheme.rounded(15, weight: .semibold))
                 }
             }
@@ -48,7 +50,7 @@ struct AnalysisCardView: View {
                     .font(YumojiTheme.rounded(24, weight: .bold))
                     .foregroundStyle(YumojiTheme.ink)
                 Spacer()
-                if let kcalText = analysis.kcalText {
+                if let kcalText = analysis.kcalText(language: lang.resolved) {
                     Text(kcalText)
                         .font(YumojiTheme.rounded(15, weight: .medium))
                         .foregroundStyle(YumojiTheme.accent)
@@ -56,7 +58,7 @@ struct AnalysisCardView: View {
             }
 
             if !analysis.isFood {
-                Text("这个好像不是吃的")
+                Text(lang.t("analysis.not_food"))
                     .font(YumojiTheme.rounded(13, weight: .medium))
                     .foregroundStyle(YumojiTheme.accent)
             }

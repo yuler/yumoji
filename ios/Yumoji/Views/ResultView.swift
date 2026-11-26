@@ -6,6 +6,8 @@ import UIKit
 struct ResultView: View {
     let session: StickerSession
 
+    @Environment(LanguageManager.self) private var lang
+
     var body: some View {
         VStack(spacing: 0) {
             header
@@ -18,7 +20,7 @@ struct ResultView: View {
                         AnalysisCardView(
                             state: session.analysis,
                             onRetry: {
-                                session.retryAnalysis()
+                                session.retryAnalysis(language: lang.resolved)
                             }
                         )
                     }
@@ -44,7 +46,7 @@ struct ResultView: View {
             Button {
                 session.reset()
             } label: {
-                Label("再来一张", systemImage: "chevron.left")
+                Label(lang.t("result.another"), systemImage: "chevron.left")
                     .font(YumojiTheme.rounded(16, weight: .semibold))
             }
             Spacer()

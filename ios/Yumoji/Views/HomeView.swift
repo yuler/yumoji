@@ -9,6 +9,7 @@ struct HomeView: View {
     let onPhoto: (PhotoInput) -> Void
     let onOpenSettings: () -> Void
 
+    @Environment(LanguageManager.self) private var lang
     @State private var pickerItem: PhotosPickerItem?
 
     /// False in the simulator and on devices without a camera.
@@ -29,7 +30,7 @@ struct HomeView: View {
                         .background(YumojiTheme.surfaceSecondary)
                         .clipShape(Circle())
                 }
-                .accessibilityLabel("设置")
+                .accessibilityLabel(lang.t("home.settings"))
             }
             .padding(.top, 10)
 
@@ -43,9 +44,10 @@ struct HomeView: View {
                 .font(YumojiTheme.rounded(40, weight: .bold))
                 .foregroundStyle(YumojiTheme.ink)
 
-            Text("把每一口好吃的，收成一枚贴纸")
+            Text(lang.t("home.tagline"))
                 .font(YumojiTheme.rounded(15))
                 .foregroundStyle(YumojiTheme.inkSoft)
+                .multilineTextAlignment(.center)
                 .padding(.top, 8)
 
             Spacer()
@@ -54,19 +56,20 @@ struct HomeView: View {
                 Button {
                     onOpenCamera()
                 } label: {
-                    actionLabel("拍一张", systemImage: "camera.fill", filled: true)
+                    actionLabel(lang.t("home.take_photo"), systemImage: "camera.fill", filled: true)
                 }
                 .disabled(!cameraAvailable)
                 .opacity(cameraAvailable ? 1 : 0.45)
 
                 PhotosPicker(selection: $pickerItem, matching: .images) {
-                    actionLabel("从相册选一张", systemImage: "photo.on.rectangle", filled: false)
+                    actionLabel(lang.t("home.pick_from_library"), systemImage: "photo.on.rectangle", filled: false)
                 }
 
                 if !cameraAvailable {
-                    Text("这台设备没有可用的相机，请从相册选择")
+                    Text(lang.t("home.camera_unavailable"))
                         .font(YumojiTheme.rounded(12))
                         .foregroundStyle(YumojiTheme.inkSoft)
+                        .multilineTextAlignment(.center)
                 }
             }
             .padding(.bottom, 28)

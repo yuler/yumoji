@@ -4,11 +4,19 @@ import SwiftUI
 struct SettingsSheetView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(ThemeManager.self) private var themeManager
+    @Environment(LanguageManager.self) private var lang
 
     private var themeBinding: Binding<ThemeMode> {
         Binding(
             get: { themeManager.selection },
             set: { themeManager.selection = $0 }
+        )
+    }
+
+    private var languageBinding: Binding<AppLanguage> {
+        Binding(
+            get: { lang.selection },
+            set: { lang.selection = $0 }
         )
     }
 
@@ -20,12 +28,12 @@ struct SettingsSheetView: View {
             .formStyle(.grouped)
             .scrollContentBackground(.hidden)
             .background(YumojiTheme.cream.ignoresSafeArea())
-            .navigationTitle("设置")
+            .navigationTitle(lang.t("settings.title"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(YumojiTheme.cream, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("完成") {
+                    Button(lang.t("settings.done")) {
                         dismiss()
                     }
                     .fontWeight(.semibold)
@@ -38,20 +46,36 @@ struct SettingsSheetView: View {
     private var generalSection: some View {
         Section {
             Picker(selection: themeBinding) {
-                Text("跟随系统")
+                Text(lang.t("settings.appearance.system"))
                     .tag(ThemeMode.system)
-                Text("浅色")
+                Text(lang.t("settings.appearance.light"))
                     .tag(ThemeMode.light)
-                Text("深色")
+                Text(lang.t("settings.appearance.dark"))
                     .tag(ThemeMode.dark)
             } label: {
-                Text("外观")
+                Text(lang.t("settings.appearance"))
                     .foregroundStyle(YumojiTheme.ink)
             }
             .pickerStyle(.menu)
             .tint(YumojiTheme.inkSoft)
+            .id(lang.resolved)
+
+            Picker(selection: languageBinding) {
+                Text(lang.t("settings.language.system"))
+                    .tag(AppLanguage.system)
+                Text("简体中文")
+                    .tag(AppLanguage.zhHans)
+                Text("English")
+                    .tag(AppLanguage.english)
+            } label: {
+                Text(lang.t("settings.language"))
+                    .foregroundStyle(YumojiTheme.ink)
+            }
+            .pickerStyle(.menu)
+            .tint(YumojiTheme.inkSoft)
+            .id(lang.resolved)
         } header: {
-            Text("通用")
+            Text(lang.t("settings.section.general"))
                 .foregroundStyle(YumojiTheme.inkSoft)
         }
         .listRowBackground(YumojiTheme.card)

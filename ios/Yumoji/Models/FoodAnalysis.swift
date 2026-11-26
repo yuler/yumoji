@@ -20,8 +20,12 @@ struct FoodAnalysis: Codable, Equatable, Sendable {
 
     /// `约 520 千卡`, or nil when there is no estimate to show.
     var kcalText: String? {
+        kcalText(language: .zhHans)
+    }
+
+    func kcalText(language: ResolvedLanguage) -> String? {
         guard isFood, let kcal else { return nil }
-        return FoodAnalysis.formatKcal(kcal)
+        return FoodAnalysis.formatKcal(kcal, language: language)
     }
 
     /// The intro, cut to the contract length in case the service overshoots.
@@ -29,7 +33,13 @@ struct FoodAnalysis: Codable, Equatable, Sendable {
         String(intro.prefix(FoodAnalysis.introLimit))
     }
 
-    static func formatKcal(_ kcal: Int) -> String {
-        "约 \(max(0, kcal)) 千卡"
+    static func formatKcal(_ kcal: Int, language: ResolvedLanguage = .zhHans) -> String {
+        let clamped = max(0, kcal)
+        switch language {
+        case .zhHans:
+            return "约 \(clamped) 千卡"
+        case .english:
+            return "~\(clamped) kcal"
+        }
     }
 }

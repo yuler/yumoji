@@ -1,0 +1,45 @@
+/* Home */
+"home.tagline" = "把每一口好吃的，收成一枚贴纸";
+"home.take_photo" = "拍一张";
+"home.pick_from_library" = "从相册选一张";
+"home.camera_unavailable" = "这台设备没有可用的相机，请从相册选择";
+"home.settings" = "设置";
+
+/* Result */
+"result.another" = "再来一张";
+
+/* Stage */
+"stage.no_subject.title" = "没找到可以做成贴纸的食物";
+"stage.no_subject.detail" = "换个角度，或者让食物在画面里更突出一些。";
+"stage.failed.title" = "抠图没有成功";
+"stage.failed.unreadable_photo" = "这张照片读不出来";
+"stage.failed.compose_failed" = "贴纸合成失败";
+"stage.pick_another" = "换一张照片";
+
+/* Analysis */
+"analysis.loading" = "正在认这是什么好吃的…";
+"analysis.failed" = "待识别";
+"analysis.retry" = "重试";
+"analysis.not_food" = "这个好像不是吃的";
+
+/* Tuning */
+"tuning.title" = "调试 · 贴纸参数";
+"tuning.border_ratio" = "白边宽度 borderRatio";
+"tuning.edge_smoothing" = "白边平滑 edgeSmoothing";
+"tuning.margin_ratio" = "透明留白 marginRatio";
+"tuning.summary.subject" = "主体长边 %d px · 白边 %.1f px";
+"tuning.summary.sticker" = "贴纸 %d × %d px";
+"tuning.simulate_failure" = "下次识别模拟失败";
+"tuning.reset_defaults" = "恢复默认参数";
+"tuning.reanalyze" = "重新识别";
+
+/* Settings */
+"settings.title" = "设置";
+"settings.done" = "完成";
+"settings.section.general" = "通用";
+"settings.appearance" = "外观";
+"settings.appearance.system" = "跟随系统";
+"settings.appearance.light" = "浅色";
+"settings.appearance.dark" = "深色";
+"settings.language" = "语言";
+"settings.language.system" = "跟随系统";

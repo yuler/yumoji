@@ -3,7 +3,9 @@ import UIKit
 
 @MainActor
 struct ContentView: View {
+    @Environment(\.scenePhase) private var scenePhase
     @Environment(ThemeManager.self) private var themeManager
+    @Environment(LanguageManager.self) private var lang
 
     @State private var session = StickerSession()
     @State private var showCamera = false
@@ -21,7 +23,7 @@ struct ContentView: View {
                         showCamera = true
                     },
                     onPhoto: { input in
-                        session.start(input)
+                        session.start(input, language: lang.resolved)
                     },
                     onOpenSettings: {
                         showSettings = true
@@ -33,7 +35,7 @@ struct ContentView: View {
             CameraPicker(
                 onImage: { image in
                     showCamera = false
-                    session.start(.camera(image))
+                    session.start(.camera(image), language: lang.resolved)
                 },
                 onCancel: {
                     showCamera = false
@@ -43,7 +45,16 @@ struct ContentView: View {
         }
         .sheet(isPresented: $showSettings) {
             SettingsSheetView()
+                .environment(\.locale, lang.locale)
                 .preferredColorScheme(themeManager.selection.preferredColorScheme)
+        }
+        .task {
+            lang.refreshSystemLanguages()
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            if newPhase == .active {
+                lang.refreshSystemLanguages()
+            }
         }
     }
 }
