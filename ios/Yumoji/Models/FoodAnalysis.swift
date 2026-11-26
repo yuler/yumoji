@@ -40,6 +40,8 @@ struct FoodAnalysis: Codable, Equatable, Sendable {
             return "约 \(clamped) 千卡"
         case .english:
             return "~\(clamped) kcal"
+        case .japanese:
+            return "約 \(clamped) kcal"
         }
     }
 }

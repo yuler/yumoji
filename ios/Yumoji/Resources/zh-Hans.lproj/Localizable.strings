@@ -9,6 +9,16 @@
 
 /* Result */
 "result.another" = "再来一张";
+"result.download" = "下载";
+"result.downloaded" = "已保存";
+"result.share" = "分享";
+"result.share.preview" = "Yumoji 贴纸";
+"result.save.denied.title" = "无法保存到相册";
+"result.save.denied.message" = "请在系统设置里允许 Yumoji 添加照片。";
+"result.save.denied.settings" = "打开设置";
+"result.save.dismiss" = "好";
+"result.save.failed.title" = "没有保存成功";
+"result.save.failed.message" = "请再试一次。";
 
 /* Stage */
 "stage.no_subject.title" = "没找到可以做成贴纸的食物";
@@ -40,7 +50,7 @@
 "settings.done" = "完成";
 "settings.section.general" = "通用";
 "settings.appearance" = "外观";
-"settings.appearance.system" = "跟随系统";
+"settings.appearance.system" = "系统";
 "settings.appearance.light" = "浅色";
 "settings.appearance.dark" = "深色";
 "settings.language" = "语言";
