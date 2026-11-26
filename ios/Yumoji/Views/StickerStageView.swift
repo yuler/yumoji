@@ -13,7 +13,8 @@ struct StickerStageView: View {
     @Environment(SoundEffects.self) private var sound
 
     @State private var containerWidth: CGFloat = UIScreen.main.bounds.width - 40
-    @State private var appearedAt = Date()
+    @State private var didMeasureWidth = false
+    @State private var photoPlacedAt: Date?
     @State private var breathing = false
     @State private var phase: CutoutRevealPhase = .scanning
     @State private var phaseStartedAt: Date?
@@ -38,7 +39,8 @@ struct StickerStageView: View {
                     sticker: session.sticker,
                     contour: session.subjectContour,
                     outsideMask: session.outsideMask,
-                    start: startPose(available: size, photo: photo),
+                    crop: session.stickerCrop,
+                    canvas: size,
                     phase: phase,
                     phaseStartedAt: phaseStartedAt,
                     cutDuration: cutDuration,
@@ -53,17 +55,24 @@ struct StickerStageView: View {
                         Color.clear.preference(key: StageWidthKey.self, value: proxy.size.width)
                     }
                 }
-                .onPreferenceChange(StageWidthKey.self) { containerWidth = $0 }
+                .onPreferenceChange(StageWidthKey.self) { width in
+                    guard width > 1 else { return }
+                    containerWidth = width
+                    if !didMeasureWidth {
+                        didMeasureWidth = true
+                        if photoPlacedAt == nil {
+                            photoPlacedAt = Date()
+                        }
+                    }
+                }
             }
         }
         .animation(.easeOut(duration: 0.25), value: isProblem)
-        .task(id: session.cutout) {
-            if session.cutout == .ready {
-                await reveal()
-            }
+        .task(id: "\(session.cutout)-\(session.photoImage != nil)-\(didMeasureWidth)") {
+            guard session.cutout == .ready, session.photoImage != nil, didMeasureWidth else { return }
+            await reveal()
         }
         .onAppear {
-            appearedAt = Date()
             if !reduceMotion {
                 withAnimation(.easeInOut(duration: 0.9).repeatForever(autoreverses: true)) {
                     breathing = true
@@ -83,24 +92,17 @@ struct StickerStageView: View {
         CGSize(width: photo.size.width * photo.scale, height: photo.size.height * photo.scale)
     }
 
-    private func startPose(available: CGSize, photo: UIImage) -> RevealGeometry.Start {
-        guard let crop = session.stickerCrop,
-              let start = RevealGeometry.start(
-                  photo: pixelSize(of: photo),
-                  crop: crop,
-                  available: available
-              )
-        else { return RevealGeometry.Start(scale: 1, offset: .zero) }
-        return start
-    }
-
     private func reveal() async {
         guard !hasRevealed else { return }
-        let remaining = minimumScan - Date().timeIntervalSince(appearedAt)
+        guard session.photoImage != nil, didMeasureWidth, containerWidth > 1 else { return }
+        if photoPlacedAt == nil {
+            photoPlacedAt = Date()
+        }
+        let remaining = minimumScan - Date().timeIntervalSince(photoPlacedAt ?? Date())
         if remaining > 0 {
             try? await Task.sleep(for: .seconds(remaining))
         }
-        guard !Task.isCancelled else { return }
+        guard !Task.isCancelled, session.cutout == .ready, session.photoImage != nil else { return }
         hasRevealed = true
         if sound.isEnabled {
             player.prepare()

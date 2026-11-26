@@ -20,21 +20,6 @@ struct HomeView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            HStack {
-                Spacer()
-
-                Button(action: onOpenSettings) {
-                    Image(systemName: "gearshape")
-                        .font(.system(size: 15, weight: .medium))
-                        .foregroundStyle(YumojiTheme.ink)
-                        .frame(width: 36, height: 36)
-                        .background(YumojiTheme.surfaceSecondary)
-                        .clipShape(Circle())
-                }
-                .accessibilityLabel(lang.t("home.settings"))
-            }
-            .padding(.top, 10)
-
             Spacer()
 
             Text("🍙")

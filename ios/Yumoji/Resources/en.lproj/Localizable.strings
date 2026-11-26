@@ -9,6 +9,7 @@
 
 /* Result */
 "result.another" = "Another";
+"result.title" = "Sticker";
 "result.download" = "Download";
 "result.downloaded" = "Saved";
 "result.share" = "Share";

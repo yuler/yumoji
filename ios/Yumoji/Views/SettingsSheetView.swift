@@ -48,6 +48,7 @@ struct SettingsSheetView: View {
             .navigationTitle(lang.t("settings.title"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(YumojiTheme.cream, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button(lang.t("settings.done")) {
