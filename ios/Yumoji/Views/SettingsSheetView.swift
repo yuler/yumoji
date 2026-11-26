@@ -10,6 +10,7 @@ struct SettingsSheetView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(ThemeManager.self) private var themeManager
     @Environment(LanguageManager.self) private var lang
+    @Environment(SoundEffects.self) private var sound
 
     @State private var isChecking = false
     @State private var checkResult: AppUpdate.CheckResult?
@@ -18,6 +19,13 @@ struct SettingsSheetView: View {
         Binding(
             get: { themeManager.selection },
             set: { themeManager.selection = $0 }
+        )
+    }
+
+    private var soundBinding: Binding<Bool> {
+        Binding(
+            get: { sound.isEnabled },
+            set: { sound.isEnabled = $0 }
         )
     }
 
@@ -54,21 +62,34 @@ struct SettingsSheetView: View {
 
     private var generalSection: some View {
         Section {
-            Picker(selection: themeBinding) {
-                Text(lang.t("settings.appearance.system"))
-                    .tag(ThemeMode.system)
-                Text(lang.t("settings.appearance.light"))
-                    .tag(ThemeMode.light)
-                Text(lang.t("settings.appearance.dark"))
-                    .tag(ThemeMode.dark)
-            } label: {
+            HStack(spacing: 12) {
                 Text(lang.t("settings.appearance"))
+                    .foregroundStyle(YumojiTheme.ink)
+                    .lineLimit(1)
+                    .layoutPriority(1)
+                    .accessibilityHidden(true)
+                Picker(selection: themeBinding) {
+                    Text(lang.t("settings.appearance.system"))
+                        .tag(ThemeMode.system)
+                    Text(lang.t("settings.appearance.light"))
+                        .tag(ThemeMode.light)
+                    Text(lang.t("settings.appearance.dark"))
+                        .tag(ThemeMode.dark)
+                } label: {
+                    Text(lang.t("settings.appearance"))
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .accessibilityLabel(lang.t("settings.appearance"))
+                .frame(maxWidth: .infinity)
             }
-            .pickerStyle(.segmented)
-            .labelsHidden()
-            .accessibilityLabel(lang.t("settings.appearance"))
             .id(lang.resolved)
-            .listRowInsets(EdgeInsets(top: 10, leading: 16, bottom: 10, trailing: 16))
+
+            Toggle(isOn: soundBinding) {
+                Text(lang.t("settings.sound"))
+                    .foregroundStyle(YumojiTheme.ink)
+            }
+            .tint(YumojiTheme.accent)
 
             Picker(selection: languageBinding) {
                 Text(lang.t("settings.language.system"))

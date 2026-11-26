@@ -53,6 +53,7 @@
 "settings.appearance.system" = "システム";
 "settings.appearance.light" = "ライト";
 "settings.appearance.dark" = "ダーク";
+"settings.sound" = "効果音";
 "settings.language" = "言語";
 "settings.language.system" = "システムに従う";
 "settings.section.about" = "情報";

@@ -42,6 +42,10 @@ final class StickerSession {
     private(set) var photoImage: UIImage?
     /// Where the sticker canvas sits in the photo, in photo pixels.
     private(set) var stickerCrop: PixelRect?
+    /// Subject outline in photo pixels. Empty until the cutout is ready.
+    private(set) var subjectContour: [CGPoint] = []
+    /// Photo with the subject punched out, aligned with `photoImage`.
+    private(set) var outsideMask: UIImage?
     /// Long side of the detected subject in pixels; 0 until the cutout is done.
     private(set) var subjectLongSide = 0
 
@@ -90,6 +94,8 @@ final class StickerSession {
         sticker = nil
         photoImage = nil
         stickerCrop = nil
+        subjectContour = []
+        outsideMask = nil
         subjectLongSide = 0
         cutout = .working
         analysis = .loading
@@ -202,13 +208,19 @@ final class StickerSession {
             let token = generation
 
             let rendered = await Task.detached(priority: .userInitiated) {
-                StickerCompositor.makeSticker(image: currentPhoto, mask: currentMask, style: currentStyle)
+                RenderedCutout.make(image: currentPhoto, mask: currentMask, style: currentStyle)
             }.value
 
             guard token == generation else { continue }
-            if let rendered, let bounds = currentMask.bounds {
+            if let stickerImage = rendered.sticker, let bounds = currentMask.bounds {
                 stickerCrop = StickerCompositor.cropRect(subject: bounds, style: currentStyle)
-                sticker = UIImage(cgImage: rendered)
+                sticker = UIImage(cgImage: stickerImage)
+                subjectContour = rendered.contour
+                if let bitmap = rendered.outside, let image = bitmap.cgImage() {
+                    outsideMask = UIImage(cgImage: image)
+                } else {
+                    outsideMask = nil
+                }
                 cutout = .ready
             } else if sticker == nil {
                 cutout = .failed(.composeFailed)
