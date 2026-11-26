@@ -7,6 +7,7 @@ struct HomeView: View {
     /// Asks the parent to present the camera; it outlives this screen.
     let onOpenCamera: () -> Void
     let onPhoto: (PhotoInput) -> Void
+    let onOpenSettings: () -> Void
 
     @State private var pickerItem: PhotosPickerItem?
 
@@ -17,6 +18,21 @@ struct HomeView: View {
 
     var body: some View {
         VStack(spacing: 0) {
+            HStack {
+                Spacer()
+
+                Button(action: onOpenSettings) {
+                    Image(systemName: "gearshape")
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundStyle(YumojiTheme.ink)
+                        .frame(width: 36, height: 36)
+                        .background(YumojiTheme.surfaceSecondary)
+                        .clipShape(Circle())
+                }
+                .accessibilityLabel("设置")
+            }
+            .padding(.top, 10)
+
             Spacer()
 
             Text("🍙")

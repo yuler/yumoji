@@ -3,8 +3,11 @@ import UIKit
 
 @MainActor
 struct ContentView: View {
+    @Environment(ThemeManager.self) private var themeManager
+
     @State private var session = StickerSession()
     @State private var showCamera = false
+    @State private var showSettings = false
 
     var body: some View {
         ZStack {
@@ -19,6 +22,9 @@ struct ContentView: View {
                     },
                     onPhoto: { input in
                         session.start(input)
+                    },
+                    onOpenSettings: {
+                        showSettings = true
                     }
                 )
             }
@@ -34,6 +40,10 @@ struct ContentView: View {
                 }
             )
             .ignoresSafeArea()
+        }
+        .sheet(isPresented: $showSettings) {
+            SettingsSheetView()
+                .preferredColorScheme(themeManager.selection.preferredColorScheme)
         }
     }
 }

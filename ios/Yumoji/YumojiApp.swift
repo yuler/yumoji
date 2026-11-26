@@ -2,10 +2,13 @@ import SwiftUI
 
 @main
 struct YumojiApp: App {
+    @State private var themeManager = ThemeManager()
+
     var body: some Scene {
         WindowGroup {
             ContentView()
-                .preferredColorScheme(.light)
+                .environment(themeManager)
+                .preferredColorScheme(themeManager.selection.preferredColorScheme)
                 .tint(YumojiTheme.accent)
         }
     }
