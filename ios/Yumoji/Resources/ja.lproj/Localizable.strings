@@ -9,6 +9,7 @@
 
 /* Result */
 "result.another" = "もう一枚";
+"result.title" = "ステッカー";
 "result.download" = "ダウンロード";
 "result.downloaded" = "保存済み";
 "result.share" = "共有";

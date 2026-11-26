@@ -29,6 +29,21 @@ enum StageLayout {
         )
     }
 
+    /// The crop, in the same space as `fitted`, where `image` is the photo.
+    /// Zero when the photo has not been given a frame yet.
+    static func cropRect(_ crop: PixelRect, image: CGSize, fitted: CGRect) -> CGRect {
+        guard image.width > 0, image.height > 0,
+              crop.width > 0, crop.height > 0,
+              fitted.width > 0, fitted.height > 0
+        else { return .zero }
+        return CGRect(
+            x: fitted.minX + CGFloat(crop.x) / image.width * fitted.width,
+            y: fitted.minY + CGFloat(crop.y) / image.height * fitted.height,
+            width: CGFloat(crop.width) / image.width * fitted.width,
+            height: CGFloat(crop.height) / image.height * fitted.height
+        )
+    }
+
     /// Maps a point in image pixels onto `fitted`.
     static func map(_ point: CGPoint, image: CGSize, fitted: CGRect) -> CGPoint {
         guard image.width > 0, image.height > 0 else { return fitted.origin }

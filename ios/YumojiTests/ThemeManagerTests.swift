@@ -10,6 +10,13 @@ final class ThemeManagerTests: XCTestCase {
         XCTAssertEqual(ThemeMode.dark.preferredColorScheme, .dark)
     }
 
+    func testResolvedColorSchemeIsConcreteForSheets() {
+        XCTAssertEqual(ThemeMode.system.resolved(against: .light), .light)
+        XCTAssertEqual(ThemeMode.system.resolved(against: .dark), .dark)
+        XCTAssertEqual(ThemeMode.light.resolved(against: .dark), .light)
+        XCTAssertEqual(ThemeMode.dark.resolved(against: .light), .dark)
+    }
+
     func testDefaultsToSystemAndPersistsSelection() {
         let suiteName = "cc.yuler.yumoji.tests.theme.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!

@@ -19,6 +19,19 @@ enum ThemeMode: String, CaseIterable, Identifiable, Sendable {
             return .dark
         }
     }
+
+    /// Scheme to apply on a sheet. `nil` means "no preference", and a sheet that
+    /// already has one does not clear it, so system has to be a real scheme.
+    func resolved(against system: ColorScheme) -> ColorScheme {
+        switch self {
+        case .system:
+            return system
+        case .light:
+            return .light
+        case .dark:
+            return .dark
+        }
+    }
 }
 
 @Observable

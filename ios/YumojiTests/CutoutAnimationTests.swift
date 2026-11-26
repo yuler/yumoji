@@ -22,6 +22,20 @@ final class CutoutAnimationTests: XCTestCase {
         XCTAssertEqual(fitted.minX, 30, accuracy: 0.001)
         XCTAssertEqual(fitted.minY, 0, accuracy: 0.001)
 
+        let crop = StageLayout.cropRect(
+            PixelRect(x: 100, y: 200, width: 400, height: 500),
+            image: CGSize(width: 1000, height: 2000),
+            fitted: fitted
+        )
+        XCTAssertEqual(crop.minX, 54, accuracy: 0.001)
+        XCTAssertEqual(crop.minY, 48, accuracy: 0.001)
+        XCTAssertEqual(crop.width, 96, accuracy: 0.001)
+        XCTAssertEqual(crop.height, 120, accuracy: 0.001)
+        XCTAssertEqual(
+            StageLayout.cropRect(PixelRect(x: 0, y: 0, width: 0, height: 10), image: CGSize(width: 1000, height: 2000), fitted: fitted),
+            .zero
+        )
+
         let mapped = StageLayout.map(CGPoint(x: 500, y: 1000), image: CGSize(width: 1000, height: 2000), fitted: fitted)
         XCTAssertEqual(mapped.x, 150, accuracy: 0.001)
         XCTAssertEqual(mapped.y, 240, accuracy: 0.001)
