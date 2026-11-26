@@ -8,6 +8,7 @@ options:
   knownRegions:
     - zh-Hans
     - en
+    - ja
 configFiles:
   Debug: Signing.xcconfig
   Release: Signing.xcconfig

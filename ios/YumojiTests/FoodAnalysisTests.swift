@@ -58,12 +58,17 @@ final class FoodAnalysisTests: XCTestCase {
         XCTAssertEqual(FoodAnalysis.formatKcal(1280, language: .english), "~1280 kcal")
         XCTAssertEqual(FoodAnalysis.formatKcal(0, language: .english), "~0 kcal")
         XCTAssertEqual(FoodAnalysis.formatKcal(-5, language: .english), "~0 kcal")
+
+        XCTAssertEqual(FoodAnalysis.formatKcal(520, language: .japanese), "約 520 kcal")
+        XCTAssertEqual(FoodAnalysis.formatKcal(0, language: .japanese), "約 0 kcal")
+        XCTAssertEqual(FoodAnalysis.formatKcal(-5, language: .japanese), "約 0 kcal")
     }
 
     func testKcalTextIsHiddenWithoutAnEstimate() {
         let known = FoodAnalysis(name: "番茄炒蛋", kcal: 320, intro: "家常菜。", isFood: true)
         XCTAssertEqual(known.kcalText, "约 320 千卡")
         XCTAssertEqual(known.kcalText(language: .english), "~320 kcal")
+        XCTAssertEqual(known.kcalText(language: .japanese), "約 320 kcal")
 
         let unknown = FoodAnalysis(name: "抹茶拿铁", kcal: nil, intro: "一杯拿铁。", isFood: true)
         XCTAssertNil(unknown.kcalText)
@@ -84,7 +89,7 @@ final class FoodAnalysisTests: XCTestCase {
     }
 
     func testMockSamplesRespectTheContract() {
-        for language in [ResolvedLanguage.zhHans, .english] {
+        for language in [ResolvedLanguage.zhHans, .english, .japanese] {
             let samples = MockFoodAnalyzer.samples(for: language)
             XCTAssertFalse(samples.isEmpty)
             for sample in samples {
@@ -104,5 +109,8 @@ final class FoodAnalysisTests: XCTestCase {
 
         let enResult = try await analyzer.analyze(image, language: .english)
         XCTAssertTrue(MockFoodAnalyzer.englishSamples.contains(enResult))
+
+        let jaResult = try await analyzer.analyze(image, language: .japanese)
+        XCTAssertTrue(MockFoodAnalyzer.japaneseSamples.contains(jaResult))
     }
 }

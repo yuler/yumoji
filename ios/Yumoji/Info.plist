@@ -28,6 +28,8 @@
 	<true/>
 	<key>NSCameraUsageDescription</key>
 	<string>Yumoji 需要使用相机拍下你吃的东西，把它做成贴纸。</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Yumoji 会把做好的贴纸保存到你的照片图库。</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

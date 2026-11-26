@@ -1,0 +1,67 @@
+/* Home */
+"home.tagline" = "おいしい一口を、ステッカーに。";
+"home.take_photo" = "写真を撮る";
+"home.pick_from_library" = "ライブラリから選ぶ";
+"home.camera_unavailable" = "このデバイスではカメラを使えません。ライブラリから選んでください。";
+"home.settings" = "設定";
+"home.version" = "バージョン %@";
+"home.version_accessibility" = "バージョン %@、設定を開く";
+
+/* Result */
+"result.another" = "もう一枚";
+"result.download" = "ダウンロード";
+"result.downloaded" = "保存済み";
+"result.share" = "共有";
+"result.share.preview" = "Yumoji ステッカー";
+"result.save.denied.title" = "写真に保存できません";
+"result.save.denied.message" = "設定で Yumoji に写真の追加を許可してください。";
+"result.save.denied.settings" = "設定を開く";
+"result.save.dismiss" = "OK";
+"result.save.failed.title" = "保存できませんでした";
+"result.save.failed.message" = "もう一度試してください。";
+
+/* Stage */
+"stage.no_subject.title" = "ステッカーにできる食べ物が見つかりません";
+"stage.no_subject.detail" = "角度を変えるか、料理が画面で目立つようにしてください。";
+"stage.failed.title" = "切り抜きに失敗しました";
+"stage.failed.unreadable_photo" = "この写真を読み取れません。";
+"stage.failed.compose_failed" = "ステッカーを合成できませんでした。";
+"stage.pick_another" = "別の写真を選ぶ";
+
+/* Analysis */
+"analysis.loading" = "何を食べているか見ています…";
+"analysis.failed" = "未識別";
+"analysis.retry" = "再試行";
+"analysis.not_food" = "食べ物ではなさそうです";
+
+/* Tuning */
+"tuning.title" = "デバッグ · ステッカー設定";
+"tuning.border_ratio" = "白ふちの幅 borderRatio";
+"tuning.edge_smoothing" = "縁のなめらかさ edgeSmoothing";
+"tuning.margin_ratio" = "透明な余白 marginRatio";
+"tuning.summary.subject" = "被写体の長辺 %d px · 白ふち %.1f px";
+"tuning.summary.sticker" = "ステッカー %d × %d px";
+"tuning.simulate_failure" = "次の識別を失敗させる";
+"tuning.reset_defaults" = "初期値に戻す";
+"tuning.reanalyze" = "識別し直す";
+
+/* Settings */
+"settings.title" = "設定";
+"settings.done" = "完了";
+"settings.section.general" = "一般";
+"settings.appearance" = "外観";
+"settings.appearance.system" = "システム";
+"settings.appearance.light" = "ライト";
+"settings.appearance.dark" = "ダーク";
+"settings.language" = "言語";
+"settings.language.system" = "システムに従う";
+"settings.section.about" = "情報";
+"settings.version.label" = "バージョン";
+"settings.update.check" = "アップデートを確認";
+"settings.update.checking" = "確認しています…";
+"settings.update.up_to_date" = "最新バージョンです";
+"settings.update.failed" = "今は確認できません";
+"settings.update.store_link_missing" = "バージョン %@ がありますが、App Store のリンクが未設定です";
+"settings.update.available" = "バージョン %@ があります";
+"settings.update.open_app_store" = "App Store を開く";
+"settings.update.open_testflight" = "TestFlight を開く";

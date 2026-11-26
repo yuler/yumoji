@@ -16,6 +16,10 @@ struct ResultView: View {
                 VStack(spacing: 18) {
                     StickerStageView(session: session)
 
+                    if session.cutout == .ready, let sticker = session.sticker {
+                        StickerExportBar(image: sticker)
+                    }
+
                     if showsAnalysis {
                         AnalysisCardView(
                             state: session.analysis,

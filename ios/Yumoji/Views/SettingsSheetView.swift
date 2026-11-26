@@ -63,11 +63,12 @@ struct SettingsSheetView: View {
                     .tag(ThemeMode.dark)
             } label: {
                 Text(lang.t("settings.appearance"))
-                    .foregroundStyle(YumojiTheme.ink)
             }
-            .pickerStyle(.menu)
-            .tint(YumojiTheme.inkSoft)
+            .pickerStyle(.segmented)
+            .labelsHidden()
+            .accessibilityLabel(lang.t("settings.appearance"))
             .id(lang.resolved)
+            .listRowInsets(EdgeInsets(top: 10, leading: 16, bottom: 10, trailing: 16))
 
             Picker(selection: languageBinding) {
                 Text(lang.t("settings.language.system"))
@@ -76,6 +77,8 @@ struct SettingsSheetView: View {
                     .tag(AppLanguage.zhHans)
                 Text("English")
                     .tag(AppLanguage.english)
+                Text("日本語")
+                    .tag(AppLanguage.japanese)
             } label: {
                 Text(lang.t("settings.language"))
                     .foregroundStyle(YumojiTheme.ink)

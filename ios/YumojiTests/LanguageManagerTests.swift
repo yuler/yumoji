@@ -30,7 +30,11 @@ final class LanguageManagerTests: XCTestCase {
         )
         XCTAssertEqual(
             ResolvedLanguage.resolve(preference: .system, preferredLanguages: ["ja-JP", "zh-Hans-CN"]),
-            .english
+            .japanese
+        )
+        XCTAssertEqual(
+            ResolvedLanguage.resolve(preference: .system, preferredLanguages: ["ja"]),
+            .japanese
         )
         XCTAssertEqual(
             ResolvedLanguage.resolve(preference: .system, preferredLanguages: ["fr-FR"]),
@@ -50,6 +54,10 @@ final class LanguageManagerTests: XCTestCase {
         XCTAssertEqual(
             ResolvedLanguage.resolve(preference: .zhHans, preferredLanguages: ["en-US"]),
             .zhHans
+        )
+        XCTAssertEqual(
+            ResolvedLanguage.resolve(preference: .japanese, preferredLanguages: ["en-US"]),
+            .japanese
         )
     }
 
@@ -87,39 +95,34 @@ final class LanguageManagerTests: XCTestCase {
     }
 
     func testStringsTablesExistAndHaveMatchingKeys() throws {
-        let zhURL = try XCTUnwrap(
-            appBundle.url(forResource: "Localizable", withExtension: "strings", subdirectory: "zh-Hans.lproj")
-        )
-        let enURL = try XCTUnwrap(
-            appBundle.url(forResource: "Localizable", withExtension: "strings", subdirectory: "en.lproj")
-        )
-
-        let zhDict = try XCTUnwrap(NSDictionary(contentsOf: zhURL) as? [String: String])
-        let enDict = try XCTUnwrap(NSDictionary(contentsOf: enURL) as? [String: String])
-
-        XCTAssertFalse(zhDict.isEmpty)
-        XCTAssertEqual(Set(zhDict.keys), Set(enDict.keys))
-
-        for (key, value) in zhDict {
-            XCTAssertFalse(value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, "Empty zh value for \(key)")
+        let tables = try ["zh-Hans", "en", "ja"].map { code in
+            try loadStrings("Localizable", language: code)
         }
-        for (key, value) in enDict {
-            XCTAssertFalse(value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, "Empty en value for \(key)")
+        XCTAssertFalse(tables[0].isEmpty)
+        XCTAssertEqual(Set(tables[0].keys), Set(tables[1].keys))
+        XCTAssertEqual(Set(tables[0].keys), Set(tables[2].keys))
+        for table in tables {
+            for (key, value) in table {
+                XCTAssertFalse(
+                    value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+                    "Empty value for \(key)"
+                )
+            }
         }
     }
 
     func testInfoPlistLocalizationTablesExist() throws {
-        let zhURL = try XCTUnwrap(
-            appBundle.url(forResource: "InfoPlist", withExtension: "strings", subdirectory: "zh-Hans.lproj")
-        )
-        let enURL = try XCTUnwrap(
-            appBundle.url(forResource: "InfoPlist", withExtension: "strings", subdirectory: "en.lproj")
-        )
+        for code in ["zh-Hans", "en", "ja"] {
+            let table = try loadStrings("InfoPlist", language: code)
+            XCTAssertFalse((table["NSCameraUsageDescription"] ?? "").isEmpty, code)
+            XCTAssertFalse((table["NSPhotoLibraryAddUsageDescription"] ?? "").isEmpty, code)
+        }
+    }
 
-        let zhDict = try XCTUnwrap(NSDictionary(contentsOf: zhURL) as? [String: String])
-        let enDict = try XCTUnwrap(NSDictionary(contentsOf: enURL) as? [String: String])
-
-        XCTAssertFalse((zhDict["NSCameraUsageDescription"] ?? "").isEmpty)
-        XCTAssertFalse((enDict["NSCameraUsageDescription"] ?? "").isEmpty)
+    private func loadStrings(_ name: String, language: String) throws -> [String: String] {
+        let url = try XCTUnwrap(
+            appBundle.url(forResource: name, withExtension: "strings", subdirectory: "\(language).lproj")
+        )
+        return try XCTUnwrap(NSDictionary(contentsOf: url) as? [String: String])
     }
 }

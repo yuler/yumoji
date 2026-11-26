@@ -42,6 +42,27 @@ struct MockFoodAnalyzer: FoodAnalyzing {
         ),
     ]
 
+    static let japaneseSamples: [FoodAnalysis] = [
+        FoodAnalysis(
+            name: "トマト卵炒め",
+            kcal: 320,
+            intro: "甘酸っぱい家庭の味。ふんわり卵とトマト。",
+            isFood: true
+        ),
+        FoodAnalysis(
+            name: "牛バララーメン",
+            kcal: 650,
+            intro: "濃いスープに柔らかい牛肉。",
+            isFood: true
+        ),
+        FoodAnalysis(
+            name: "抹茶ラテ",
+            kcal: nil,
+            intro: "ほろ苦い抹茶と、ミルクの泡。",
+            isFood: true
+        ),
+    ]
+
     static let englishSamples: [FoodAnalysis] = [
         FoodAnalysis(
             name: "Tomato & Egg Stir-Fry",
@@ -69,6 +90,8 @@ struct MockFoodAnalyzer: FoodAnalyzing {
             return samples
         case .english:
             return englishSamples
+        case .japanese:
+            return japaneseSamples
         }
     }
 

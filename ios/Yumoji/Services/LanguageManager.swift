@@ -5,6 +5,7 @@ enum AppLanguage: String, CaseIterable, Identifiable, Sendable {
     case system
     case zhHans = "zh-Hans"
     case english = "en"
+    case japanese = "ja"
 
     var id: String { rawValue }
 }
@@ -12,6 +13,7 @@ enum AppLanguage: String, CaseIterable, Identifiable, Sendable {
 enum ResolvedLanguage: String, Equatable, Sendable {
     case zhHans = "zh-Hans"
     case english = "en"
+    case japanese = "ja"
 
     var locale: Locale {
         Locale(identifier: rawValue)
@@ -26,12 +28,17 @@ enum ResolvedLanguage: String, Equatable, Sendable {
             return .zhHans
         case .english:
             return .english
+        case .japanese:
+            return .japanese
         case .system:
             guard let primary = preferredLanguages.first?.lowercased() else {
                 return .english
             }
             if primary == "zh" || primary.hasPrefix("zh-") || primary.hasPrefix("zh_") {
                 return .zhHans
+            }
+            if primary == "ja" || primary.hasPrefix("ja-") || primary.hasPrefix("ja_") {
+                return .japanese
             }
             return .english
         }

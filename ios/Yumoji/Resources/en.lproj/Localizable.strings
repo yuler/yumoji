@@ -9,6 +9,16 @@
 
 /* Result */
 "result.another" = "Another";
+"result.download" = "Download";
+"result.downloaded" = "Saved";
+"result.share" = "Share";
+"result.share.preview" = "Yumoji sticker";
+"result.save.denied.title" = "Photos Access Needed";
+"result.save.denied.message" = "Allow Yumoji to add photos in Settings.";
+"result.save.denied.settings" = "Open Settings";
+"result.save.dismiss" = "OK";
+"result.save.failed.title" = "Couldn't Save";
+"result.save.failed.message" = "Try again.";
 
 /* Stage */
 "stage.no_subject.title" = "Couldn't find food to turn into a sticker";
@@ -40,7 +50,7 @@
 "settings.done" = "Done";
 "settings.section.general" = "General";
 "settings.appearance" = "Appearance";
-"settings.appearance.system" = "Follow System";
+"settings.appearance.system" = "System";
 "settings.appearance.light" = "Light";
 "settings.appearance.dark" = "Dark";
 "settings.language" = "Language";
