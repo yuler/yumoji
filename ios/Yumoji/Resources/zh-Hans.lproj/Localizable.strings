@@ -1,8 +1,8 @@
 /* Home & Board */
 "home.tagline" = "把眼前喜欢的一切，收成一枚贴纸";
 "home.take_photo" = "拍一张";
-"home.pick_from_library" = "从相册选一张";
-"home.camera_unavailable" = "这台设备没有可用的相机，请从相册选择";
+"home.pick_from_library" = "相册";
+"home.camera_unavailable" = "这台设备没有可用的相机，请用相册";
 "home.settings" = "设置";
 "home.version" = "版本 %@";
 "home.version_accessibility" = "版本 %@，打开设置";
@@ -15,7 +15,6 @@
 "detail.title" = "贴纸详情";
 "detail.view_on_board" = "在画板中查看";
 "board.title" = "画板";
-"board.count" = "%d 枚";
 "board.action.bring_front" = "置顶";
 "board.action.pin" = "Pin";
 "board.action.place" = "放置";

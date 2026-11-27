@@ -74,15 +74,6 @@ struct ContentView: View {
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     if hasStickers {
-                        ToolbarItem(placement: .topBarLeading) {
-                            Text(lang.t("board.count", pager.totalCount))
-                                .font(YumojiTheme.rounded(13, weight: .semibold))
-                                .foregroundStyle(YumojiTheme.inkSoft)
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 4)
-                                .background(YumojiTheme.card, in: Capsule())
-                        }
-
                         ToolbarItem(placement: .topBarTrailing) {
                             Button {
                                 withAnimation(.easeInOut(duration: 0.2)) {
@@ -104,7 +95,7 @@ struct ContentView: View {
                             Button {
                                 openBoard(focusStickerID: nil)
                             } label: {
-                                Image(systemName: "rectangle.on.rectangle")
+                                Image(systemName: "square.grid.2x2")
                             }
                             .accessibilityLabel(lang.t("grid.open_board"))
                             .foregroundStyle(YumojiTheme.ink)

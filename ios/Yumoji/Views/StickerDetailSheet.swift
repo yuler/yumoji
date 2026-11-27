@@ -123,7 +123,7 @@ struct StickerDetailSheet: View {
                     dismiss()
                     onViewOnBoard(id)
                 } label: {
-                    Label(lang.t("detail.view_on_board"), systemImage: "rectangle.on.rectangle")
+                    Label(lang.t("detail.view_on_board"), systemImage: "square.grid.2x2")
                         .font(YumojiTheme.rounded(15, weight: .semibold))
                         .foregroundStyle(YumojiTheme.ink)
                         .frame(maxWidth: .infinity)

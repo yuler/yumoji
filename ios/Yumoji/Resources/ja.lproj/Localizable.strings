@@ -1,8 +1,8 @@
 /* Home & Board */
 "home.tagline" = "お気に入りを、そのままステッカーに。";
 "home.take_photo" = "写真を撮る";
-"home.pick_from_library" = "ライブラリから選ぶ";
-"home.camera_unavailable" = "このデバイスではカメラを使えません。ライブラリから選んでください。";
+"home.pick_from_library" = "写真";
+"home.camera_unavailable" = "このデバイスではカメラを使えません。写真を選んでください。";
 "home.settings" = "設定";
 "home.version" = "バージョン %@";
 "home.version_accessibility" = "バージョン %@、設定を開く";
@@ -15,7 +15,6 @@
 "detail.title" = "ステッカー";
 "detail.view_on_board" = "ボードで見る";
 "board.title" = "ステッカーボード";
-"board.count" = "%d 枚";
 "board.action.bring_front" = "最前面へ";
 "board.action.pin" = "Pin";
 "board.action.place" = "配置";

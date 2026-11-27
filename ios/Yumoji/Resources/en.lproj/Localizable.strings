@@ -1,8 +1,8 @@
 /* Home & Board */
 "home.tagline" = "Turn anything you love into a sticker.";
 "home.take_photo" = "Take a Photo";
-"home.pick_from_library" = "Choose from Library";
-"home.camera_unavailable" = "Camera is unavailable on this device. Choose from Library instead.";
+"home.pick_from_library" = "Library";
+"home.camera_unavailable" = "Camera is unavailable on this device. Use Library instead.";
 "home.settings" = "Settings";
 "home.version" = "Version %@";
 "home.version_accessibility" = "Version %@, open Settings";
@@ -15,7 +15,6 @@
 "detail.title" = "Sticker";
 "detail.view_on_board" = "View on Board";
 "board.title" = "Sticker Board";
-"board.count" = "%d";
 "board.action.bring_front" = "Bring to Front";
 "board.action.pin" = "Pin";
 "board.action.place" = "Place";
