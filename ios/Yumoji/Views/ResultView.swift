@@ -5,6 +5,7 @@ import UIKit
 @MainActor
 struct ResultView: View {
     let session: StickerSession
+    var saveLabelKey: String = "result.save_to_board"
     let onSaveToBoard: (UIImage, Date?) -> Void
     let onOpenExport: (UIImage) -> Void
 
@@ -42,7 +43,7 @@ struct ResultView: View {
                     } else {
                         Image(systemName: "checkmark.circle.fill")
                     }
-                    Text(isSavingToBoard ? lang.t("result.saving") : lang.t("result.save_to_board"))
+                    Text(isSavingToBoard ? lang.t("result.saving") : lang.t(saveLabelKey))
                         .lineLimit(1)
                 }
                 .font(YumojiTheme.rounded(17, weight: .semibold))

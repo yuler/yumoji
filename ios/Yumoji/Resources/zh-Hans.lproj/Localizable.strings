@@ -6,11 +6,22 @@
 "home.settings" = "设置";
 "home.version" = "版本 %@";
 "home.version_accessibility" = "版本 %@，打开设置";
-"board.title" = "贴纸板";
+"grid.title" = "贴纸";
+"grid.open_board" = "打开画板";
+"detail.title" = "贴纸详情";
+"detail.view_on_board" = "在画板中查看";
+"board.title" = "画板";
 "board.count" = "%d 枚";
 "board.action.bring_front" = "置顶";
+"board.action.pin" = "Pin";
+"board.action.place" = "放置";
 "board.action.export" = "导出 / 分享";
+"board.action.export_short" = "导出";
 "board.action.delete" = "删除";
+"board.action.fit_all" = "整体居中";
+"board.action.reset_zoom" = "重置缩放";
+"board.action.add" = "添加贴纸";
+"board.empty.hint" = "点击右下角 + 添加你的第一枚贴纸";
 "board.delete.confirm.title" = "删除这枚贴纸？";
 "board.delete.confirm.action" = "删除";
 "board.delete.confirm.cancel" = "取消";
@@ -19,7 +30,8 @@
 /* Result */
 "result.another" = "再来一张";
 "result.title" = "新贴纸";
-"result.save_to_board" = "贴到看板";
+"result.save_sticker" = "保存贴纸";
+"result.save_to_board" = "贴到画板";
 "result.saving" = "正在保存…";
 "result.export_share" = "导出 / 分享";
 "result.download" = "保存到相册";

@@ -6,11 +6,22 @@
 "home.settings" = "Settings";
 "home.version" = "Version %@";
 "home.version_accessibility" = "Version %@, open Settings";
+"grid.title" = "Stickers";
+"grid.open_board" = "Open Board";
+"detail.title" = "Sticker";
+"detail.view_on_board" = "View on Board";
 "board.title" = "Sticker Board";
 "board.count" = "%d";
 "board.action.bring_front" = "Bring to Front";
+"board.action.pin" = "Pin";
+"board.action.place" = "Place";
 "board.action.export" = "Export / Share";
+"board.action.export_short" = "Export";
 "board.action.delete" = "Delete";
+"board.action.fit_all" = "Fit All";
+"board.action.reset_zoom" = "Reset Zoom";
+"board.action.add" = "Add Sticker";
+"board.empty.hint" = "Tap + to add your first sticker";
 "board.delete.confirm.title" = "Delete this sticker?";
 "board.delete.confirm.action" = "Delete";
 "board.delete.confirm.cancel" = "Cancel";
@@ -19,7 +30,8 @@
 /* Result */
 "result.another" = "Another";
 "result.title" = "New Sticker";
-"result.save_to_board" = "Stick to Board";
+"result.save_sticker" = "Save Sticker";
+"result.save_to_board" = "Place on Board";
 "result.saving" = "Saving…";
 "result.export_share" = "Export / Share";
 "result.download" = "Save to Photos";

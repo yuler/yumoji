@@ -94,8 +94,39 @@ final class StickerStorageTests: XCTestCase {
 
         let remainingRecords = try context.fetch(FetchDescriptor<StickerRecord>())
         let remainingAssets = try context.fetch(FetchDescriptor<StickerAsset>())
+        let remainingPlacements = try context.fetch(FetchDescriptor<BoardItemPlacement>())
+        let remainingLayouts = try context.fetch(FetchDescriptor<BoardLayoutRecord>())
         XCTAssertTrue(remainingRecords.isEmpty)
         XCTAssertTrue(remainingAssets.isEmpty)
+        XCTAssertTrue(remainingPlacements.isEmpty)
+        XCTAssertTrue(remainingLayouts.isEmpty)
+    }
+
+    @MainActor
+    func testDecoupledBoardViewportAndLegacyPlacementMigration() throws {
+        let container = try StickerStorage.makeContainer(inMemory: true)
+        let context = container.mainContext
+
+        // Insert a legacy StickerRecord without a BoardItemPlacement.
+        let legacy = StickerRecord(x: 0.75, y: 310, scale: 1.4, rotation: 0.25, zIndex: 7)
+        context.insert(legacy)
+        try context.save()
+
+        let migrated = StickerStorage.ensureBoardPlacements(for: [legacy], in: context)
+        XCTAssertEqual(migrated.count, 1)
+        XCTAssertEqual(migrated[0].stickerID, legacy.id)
+        XCTAssertEqual(migrated[0].scale, 1.4, accuracy: 0.001)
+        XCTAssertEqual(migrated[0].rotation, 0.25, accuracy: 0.001)
+        XCTAssertEqual(migrated[0].zIndex, 7)
+
+        XCTAssertNil(StickerStorage.loadBoardViewport(in: context))
+        let savedViewport = BoardViewport(offset: CGSize(width: -120, height: 85), zoom: 1.35)
+        StickerStorage.saveBoardViewport(savedViewport, in: context)
+
+        let loadedViewport = try XCTUnwrap(StickerStorage.loadBoardViewport(in: context))
+        XCTAssertEqual(loadedViewport.offset.width, -120, accuracy: 0.01)
+        XCTAssertEqual(loadedViewport.offset.height, 85, accuracy: 0.01)
+        XCTAssertEqual(loadedViewport.zoom, 1.35, accuracy: 0.001)
     }
 
     @MainActor
