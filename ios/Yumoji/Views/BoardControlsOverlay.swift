@@ -52,6 +52,7 @@ struct BoardSelectedActionBar: View {
                     : (destructive ? Color.red.opacity(0.1) : YumojiTheme.surfaceSecondary.opacity(0.85)),
                 in: Capsule()
             )
+            .contentShape(Capsule())
         }
         .buttonStyle(.plain)
     }
@@ -122,6 +123,26 @@ struct BoardUnselectedControls: View {
             }
             .accessibilityLabel(lang.t("board.action.add"))
         }
+    }
+}
+
+/// Empty-canvas prompt shown when the board has no stickers yet.
+@MainActor
+struct BoardEmptyHint: View {
+    @Environment(LanguageManager.self) private var lang
+
+    var body: some View {
+        VStack(spacing: 10) {
+            Text("✨")
+                .font(.system(size: 46))
+            Text(lang.t("board.empty.hint"))
+                .font(YumojiTheme.rounded(15, weight: .medium))
+                .foregroundStyle(YumojiTheme.inkSoft)
+                .multilineTextAlignment(.center)
+        }
+        .padding(.horizontal, 32)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .allowsHitTesting(false)
     }
 }
 

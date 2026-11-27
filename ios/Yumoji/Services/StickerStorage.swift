@@ -199,6 +199,39 @@ enum StickerStorage {
     }
 
     @MainActor
+    static func fetchStickerCount(in context: ModelContext) -> Int {
+        (try? context.fetchCount(FetchDescriptor<StickerRecord>())) ?? 0
+    }
+
+    @MainActor
+    static func fetchStickerPage(
+        offset: Int,
+        limit: Int,
+        in context: ModelContext
+    ) -> [StickerRecord] {
+        guard limit > 0 else { return [] }
+        var descriptor = FetchDescriptor<StickerRecord>(
+            sortBy: [
+                SortDescriptor(\.createdAt, order: .reverse),
+                SortDescriptor(\.id, order: .reverse)
+            ]
+        )
+        descriptor.fetchOffset = max(0, offset)
+        descriptor.fetchLimit = limit
+        return (try? context.fetch(descriptor)) ?? []
+    }
+
+    @MainActor
+    @discardableResult
+    static func ensureAllBoardPlacements(
+        boardID: String = StickerRecord.defaultBoardID,
+        in context: ModelContext
+    ) -> [BoardItemPlacement] {
+        let records = (try? context.fetch(FetchDescriptor<StickerRecord>())) ?? []
+        return ensureBoardPlacements(for: records, boardID: boardID, in: context)
+    }
+
+    @MainActor
     static func fetchPlacements(
         boardID: String = StickerRecord.defaultBoardID,
         in context: ModelContext

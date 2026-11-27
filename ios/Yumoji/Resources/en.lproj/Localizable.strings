@@ -8,6 +8,10 @@
 "home.version_accessibility" = "Version %@, open Settings";
 "grid.title" = "Stickers";
 "grid.open_board" = "Open Board";
+"grid.frame.show" = "Show Card Frame";
+"grid.frame.hide" = "Hide Card Frame";
+"grid.loading_more" = "Loading more…";
+"grid.all_loaded" = "All %d stickers loaded";
 "detail.title" = "Sticker";
 "detail.view_on_board" = "View on Board";
 "board.title" = "Sticker Board";

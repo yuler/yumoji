@@ -20,9 +20,8 @@ struct ContentView: View {
     @Environment(ThemeManager.self) private var themeManager
     @Environment(LanguageManager.self) private var lang
 
-    @Query(sort: \StickerRecord.createdAt, order: .reverse) private var stickers: [StickerRecord]
-    @Query private var placements: [BoardItemPlacement]
-
+    @State private var pager = StickerGridPager()
+    @State private var showCardFrame = StickerGridLayout.loadShowCardFrame()
     @State private var session = StickerSession()
     @State private var navPath: [AppRoute] = []
     @State private var captureOrigin: CaptureOrigin = .grid
@@ -38,6 +37,10 @@ struct ContentView: View {
         UIImagePickerController.isSourceTypeAvailable(.camera)
     }
 
+    private var hasStickers: Bool {
+        pager.totalCount > 0 || !pager.items.isEmpty
+    }
+
     var body: some View {
         ZStack {
             YumojiTheme.cream.ignoresSafeArea()
@@ -45,7 +48,11 @@ struct ContentView: View {
             NavigationStack(path: $navPath) {
                 HomeView(
                     appVersion: AppUpdate.marketingVersion(),
-                    stickers: stickers,
+                    stickers: pager.items,
+                    totalCount: pager.totalCount,
+                    hasMore: pager.hasMore,
+                    isLoadingMore: pager.isLoading,
+                    showCardFrame: showCardFrame,
                     onOpenCamera: {
                         captureOrigin = .grid
                         showCamera = true
@@ -58,19 +65,39 @@ struct ContentView: View {
                     },
                     onSelectSticker: { record in
                         inspectedSticker = record
+                    },
+                    onLoadMore: {
+                        pager.loadNextPage(in: modelContext)
                     }
                 )
-                .navigationTitle(stickers.isEmpty ? "" : lang.t("grid.title"))
+                .navigationTitle(hasStickers ? lang.t("grid.title") : "")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
-                    if !stickers.isEmpty {
+                    if hasStickers {
                         ToolbarItem(placement: .topBarLeading) {
-                            Text(lang.t("board.count", stickers.count))
+                            Text(lang.t("board.count", pager.totalCount))
                                 .font(YumojiTheme.rounded(13, weight: .semibold))
                                 .foregroundStyle(YumojiTheme.inkSoft)
                                 .padding(.horizontal, 10)
                                 .padding(.vertical, 4)
                                 .background(YumojiTheme.card, in: Capsule())
+                        }
+
+                        ToolbarItem(placement: .topBarTrailing) {
+                            Button {
+                                withAnimation(.easeInOut(duration: 0.2)) {
+                                    showCardFrame.toggle()
+                                }
+                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            } label: {
+                                Image(systemName: showCardFrame ? "square.inset.filled" : "square.dashed")
+                            }
+                            .accessibilityLabel(
+                                showCardFrame
+                                    ? lang.t("grid.frame.hide")
+                                    : lang.t("grid.frame.show")
+                            )
+                            .foregroundStyle(showCardFrame ? YumojiTheme.accent : YumojiTheme.ink)
                         }
 
                         ToolbarItem(placement: .topBarTrailing) {
@@ -90,8 +117,6 @@ struct ContentView: View {
                     switch route {
                     case .board(let focusStickerID):
                         StickerBoardView(
-                            stickers: stickers,
-                            placements: placements.filter { $0.boardID == StickerRecord.defaultBoardID },
                             initialFocusStickerID: focusStickerID,
                             selectedStickerID: $selectedBoardStickerID,
                             cameraAvailable: cameraAvailable,
@@ -107,6 +132,9 @@ struct ContentView: View {
                             },
                             onViewportCenterChanged: { center in
                                 boardCenterAnchor = center
+                            },
+                            onStickersMutated: {
+                                pager.reloadPreservingLoadedCount(in: modelContext)
                             }
                         )
                         .navigationTitle(lang.t("board.title"))
@@ -153,6 +181,7 @@ struct ContentView: View {
                     selectedBoardStickerID = nil
                     inspectedSticker = nil
                     navPath.removeAll()
+                    pager.reloadPreservingLoadedCount(in: modelContext)
                 }
             )
             .environment(\.locale, lang.locale)
@@ -186,10 +215,10 @@ struct ContentView: View {
         }
         .task {
             lang.refreshSystemLanguages()
-            syncBoardPlacements()
+            pager.loadInitialIfNeeded(in: modelContext)
         }
-        .onChange(of: stickers.count) { _, _ in
-            syncBoardPlacements()
+        .onChange(of: showCardFrame) { _, newValue in
+            StickerGridLayout.saveShowCardFrame(newValue)
         }
         .onChange(of: session.isActive) { _, isActive in
             if !isActive, navPath.last == .result {
@@ -217,7 +246,7 @@ struct ContentView: View {
     }
 
     private func openBoard(focusStickerID: UUID?) {
-        syncBoardPlacements()
+        StickerStorage.ensureAllBoardPlacements(in: modelContext)
         selectedBoardStickerID = focusStickerID
         navPath.append(.board(focusStickerID: focusStickerID))
     }
@@ -231,6 +260,7 @@ struct ContentView: View {
             preferredAnchor: anchor,
             in: modelContext
         ) {
+            pager.reloadPreservingLoadedCount(in: modelContext)
             if captureOrigin == .board {
                 selectedBoardStickerID = saved.id
             }
@@ -246,10 +276,7 @@ struct ContentView: View {
             inspectedSticker = nil
         }
         try? StickerStorage.delete(record, in: modelContext)
-    }
-
-    private func syncBoardPlacements() {
-        StickerStorage.ensureBoardPlacements(for: stickers, in: modelContext)
+        pager.reloadPreservingLoadedCount(in: modelContext)
     }
 
     @ToolbarContentBuilder
