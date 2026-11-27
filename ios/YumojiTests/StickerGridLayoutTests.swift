@@ -96,4 +96,18 @@ final class StickerGridLayoutTests: XCTestCase {
         StickerGridLayout.saveColumns(1, to: defaults)
         XCTAssertEqual(StickerGridLayout.loadSavedColumns(from: defaults), 2)
     }
+
+    func testCardFrameDefaultsToHiddenAndPersistsPreference() {
+        let suiteName = "YumojiGridFrameTests-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        XCTAssertFalse(StickerGridLayout.loadShowCardFrame(from: defaults))
+
+        StickerGridLayout.saveShowCardFrame(true, to: defaults)
+        XCTAssertTrue(StickerGridLayout.loadShowCardFrame(from: defaults))
+
+        StickerGridLayout.saveShowCardFrame(false, to: defaults)
+        XCTAssertFalse(StickerGridLayout.loadShowCardFrame(from: defaults))
+    }
 }

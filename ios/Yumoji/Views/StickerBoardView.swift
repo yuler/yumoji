@@ -7,8 +7,8 @@ import UIKit
 /// explicit place/save + Pin (bring to front), Fit-All centering, and persisted viewport.
 @MainActor
 struct StickerBoardView: View {
-    let stickers: [StickerRecord]
-    let placements: [BoardItemPlacement]
+    static let canvasCoordinateSpaceName = "BoardCanvasSpace"
+
     let initialFocusStickerID: UUID?
     @Binding var selectedStickerID: UUID?
     let cameraAvailable: Bool
@@ -16,9 +16,13 @@ struct StickerBoardView: View {
     let onPhoto: (PhotoInput) -> Void
     let onExportSticker: (UIImage) -> Void
     let onViewportCenterChanged: (CGPoint) -> Void
+    var onStickersMutated: () -> Void = {}
 
     @Environment(\.modelContext) private var modelContext
     @Environment(LanguageManager.self) private var lang
+
+    @Query(sort: \StickerRecord.createdAt, order: .reverse) private var stickers: [StickerRecord]
+    @Query private var allPlacements: [BoardItemPlacement]
 
     @State private var viewport: BoardViewport = .identity
     @State private var canvasSize: CGSize = .zero
@@ -27,9 +31,11 @@ struct StickerBoardView: View {
     @State private var panStartOffset: CGSize?
     @State private var zoomBaseViewport: BoardViewport?
 
+    @State private var draftStickerID: UUID?
     @State private var draftTransform: DraftStickerTransform?
     @State private var dragStartWorld: CGPoint?
     @State private var isDraggingSticker = false
+    @State private var isTwoFingerTransforming = false
     @State private var pinchBaseScale: Double?
     @State private var rotateBaseRadians: Double?
     @State private var isSnappedUpright = false
@@ -37,6 +43,10 @@ struct StickerBoardView: View {
     @State private var pendingDelete: StickerRecord?
     @State private var showPhotosPicker = false
     @State private var pickerItem: PhotosPickerItem?
+
+    private var placements: [BoardItemPlacement] {
+        allPlacements.filter { $0.boardID == StickerRecord.defaultBoardID }
+    }
 
     private var placementByStickerID: [UUID: BoardItemPlacement] {
         Dictionary(uniqueKeysWithValues: placements.map { ($0.stickerID, $0) })
@@ -66,46 +76,55 @@ struct StickerBoardView: View {
             let size = proxy.size
 
             ZStack(alignment: .bottom) {
-                InfiniteDotGridCanvas(viewport: viewport, viewportSize: size)
-                    .contentShape(Rectangle())
-                    .onTapGesture(count: 2) {
-                        guard selectedStickerID == nil else { return }
-                        toggleFitOrReset(in: size)
-                    }
-                    .onTapGesture {
-                        commitDraftAndDeselect()
-                    }
-                    .gesture(canvasPanGesture)
+                // Keep canvas + stickers in their own ZStack so sticker zIndex values
+                // stay scoped to the canvas and can never overlap the bottom toolbar.
+                ZStack {
+                    InfiniteDotGridCanvas(viewport: viewport, viewportSize: size)
+                        .contentShape(Rectangle())
+                        .onTapGesture(count: 2) {
+                            guard selectedStickerID == nil else { return }
+                            toggleFitOrReset(in: size)
+                        }
+                        .onTapGesture {
+                            commitDraftAndDeselect()
+                        }
 
-                if orderedItems.isEmpty {
-                    emptyBoardHint
-                } else {
-                    ForEach(orderedItems, id: \.0.id) { record, placement in
-                        let isSelected = record.id == selectedStickerID
-                        let activeTransform = (isSelected ? draftTransform : nil)
-                            ?? DraftStickerTransform(placement: placement)
+                    if orderedItems.isEmpty {
+                        BoardEmptyHint()
+                    } else {
+                        ForEach(orderedItems, id: \.0.id) { record, placement in
+                            let isSelected = record.id == selectedStickerID
+                            let activeTransform = (isSelected && draftStickerID == record.id ? draftTransform : nil)
+                                ?? DraftStickerTransform(placement: placement)
 
-                        BoardStickerItemView(
-                            record: record,
-                            transform: activeTransform,
-                            viewport: viewport,
-                            viewportSize: size,
-                            isSelected: isSelected,
-                            isDragging: isSelected && isDraggingSticker,
-                            isSnappedUpright: isSelected && isSnappedUpright,
-                            onTap: {
-                                selectSticker(record)
-                            },
-                            onDragChanged: { translation in
-                                handleStickerDragChanged(translation: translation, fallback: placement)
-                            },
-                            onDragEnded: { translation in
-                                handleStickerDragEnded(translation: translation, fallback: placement)
-                            }
-                        )
-                        .zIndex(Double(placement.zIndex) + (isSelected ? 0.5 : 0))
+                            BoardStickerItemView(
+                                record: record,
+                                transform: activeTransform,
+                                viewport: viewport,
+                                viewportSize: size,
+                                canvasCoordinateSpace: Self.canvasCoordinateSpaceName,
+                                isSelected: isSelected,
+                                isDragging: isSelected && isDraggingSticker,
+                                isSnappedUpright: isSelected && isSnappedUpright,
+                                onTap: {
+                                    selectSticker(record)
+                                },
+                                onDragChanged: { translation in
+                                    handleStickerDragChanged(translation: translation, fallback: placement)
+                                },
+                                onDragEnded: { translation in
+                                    handleStickerDragEnded(translation: translation, fallback: placement)
+                                }
+                            )
+                            .zIndex(Double(placement.zIndex) + (isSelected ? 0.5 : 0))
+                        }
                     }
                 }
+                .frame(width: size.width, height: size.height)
+                .coordinateSpace(name: Self.canvasCoordinateSpaceName)
+                .clipped()
+                .gesture(canvasPanGesture)
+                .simultaneousGesture(twoFingerGesture(in: size))
 
                 VStack(spacing: 10) {
                     if let active = selectedRecord {
@@ -138,10 +157,9 @@ struct StickerBoardView: View {
                 .animation(.spring(response: 0.28, dampingFraction: 0.85), value: selectedStickerID)
             }
             .frame(width: size.width, height: size.height)
-            .clipped()
-            .simultaneousGesture(twoFingerGesture(in: size))
             .onAppear {
                 canvasSize = size
+                StickerStorage.ensureBoardPlacements(for: stickers, in: modelContext)
                 initializeViewportIfNeeded(size: size)
                 syncDraftForCurrentSelection()
                 reportViewportCenter()
@@ -213,6 +231,7 @@ struct StickerBoardView: View {
         MagnifyGesture()
             .simultaneously(with: RotateGesture())
             .onChanged { value in
+                isTwoFingerTransforming = true
                 if selectedStickerID != nil {
                     handleSelectedStickerTransformChanged(value)
                 } else if let mag = value.first {
@@ -233,6 +252,7 @@ struct StickerBoardView: View {
                 }
             }
             .onEnded { _ in
+                isTwoFingerTransforming = false
                 if selectedStickerID != nil {
                     pinchBaseScale = nil
                     rotateBaseRadians = nil
@@ -246,8 +266,11 @@ struct StickerBoardView: View {
     }
 
     private func handleStickerDragChanged(translation: CGSize, fallback: BoardItemPlacement) {
+        guard !isTwoFingerTransforming else { return }
         if dragStartWorld == nil {
-            let current = draftTransform ?? DraftStickerTransform(placement: fallback)
+            let current = (draftStickerID == fallback.stickerID ? draftTransform : nil)
+                ?? DraftStickerTransform(placement: fallback)
+            draftStickerID = fallback.stickerID
             draftTransform = current
             dragStartWorld = CGPoint(x: current.x, y: current.y)
             isDraggingSticker = true
@@ -259,7 +282,9 @@ struct StickerBoardView: View {
     }
 
     private func handleStickerDragEnded(translation: CGSize, fallback: BoardItemPlacement) {
-        handleStickerDragChanged(translation: translation, fallback: fallback)
+        if !isTwoFingerTransforming {
+            handleStickerDragChanged(translation: translation, fallback: fallback)
+        }
         dragStartWorld = nil
         isDraggingSticker = false
     }
@@ -271,7 +296,8 @@ struct StickerBoardView: View {
               let placement = placementByStickerID[selectedID]
         else { return }
 
-        if draftTransform == nil {
+        if draftTransform == nil || draftStickerID != selectedID {
+            draftStickerID = selectedID
             draftTransform = DraftStickerTransform(placement: placement)
         }
         guard var draft = draftTransform else { return }
@@ -301,21 +327,7 @@ struct StickerBoardView: View {
         draftTransform = draft
     }
 
-    // Floating bars & InfiniteDotGridCanvas live in Views/BoardControlsOverlay.swift.
-
-    private var emptyBoardHint: some View {
-        VStack(spacing: 10) {
-            Text("✨")
-                .font(.system(size: 46))
-            Text(lang.t("board.empty.hint"))
-                .font(YumojiTheme.rounded(15, weight: .medium))
-                .foregroundStyle(YumojiTheme.inkSoft)
-                .multilineTextAlignment(.center)
-        }
-        .padding(.horizontal, 32)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .allowsHitTesting(false)
-    }
+    // Floating bars, BoardEmptyHint & InfiniteDotGridCanvas live in Views/BoardControlsOverlay.swift.
 
     // MARK: - Selection & Persistence
 
@@ -324,9 +336,14 @@ struct StickerBoardView: View {
             return
         }
         commitDraftIfNeeded()
+        resetTransientGestureState()
         selectedStickerID = record.id
         if let placement = placementByStickerID[record.id] {
+            draftStickerID = record.id
             draftTransform = DraftStickerTransform(placement: placement)
+        } else {
+            draftStickerID = nil
+            draftTransform = nil
         }
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
     }
@@ -335,16 +352,19 @@ struct StickerBoardView: View {
         guard let selectedStickerID,
               let placement = placementByStickerID[selectedStickerID]
         else {
+            draftStickerID = nil
             draftTransform = nil
             return
         }
-        if draftTransform == nil {
+        if draftTransform == nil || draftStickerID != selectedStickerID {
+            draftStickerID = selectedStickerID
             draftTransform = DraftStickerTransform(placement: placement)
         }
     }
 
     private func commitDraftIfNeeded() {
         guard let selectedID = selectedStickerID,
+              draftStickerID == selectedID,
               let draft = draftTransform,
               let placement = placementByStickerID[selectedID]
         else { return }
@@ -360,23 +380,33 @@ struct StickerBoardView: View {
         guard selectedStickerID != nil else { return }
         commitDraftIfNeeded()
         selectedStickerID = nil
+        draftStickerID = nil
         draftTransform = nil
-        dragStartWorld = nil
-        isDraggingSticker = false
-        pinchBaseScale = nil
-        rotateBaseRadians = nil
-        isSnappedUpright = false
+        resetTransientGestureState()
         if haptic {
             UIImpactFeedbackGenerator(style: .medium).impactOccurred()
         }
     }
 
+    private func resetTransientGestureState() {
+        dragStartWorld = nil
+        isDraggingSticker = false
+        isTwoFingerTransforming = false
+        pinchBaseScale = nil
+        rotateBaseRadians = nil
+        isSnappedUpright = false
+    }
+
     private func pinToFront(_ record: StickerRecord) {
         guard let placement = placementByStickerID[record.id] else { return }
-        let maxZ = placements.map(\.zIndex).max() ?? 0
-        if placement.zIndex < maxZ {
-            placement.zIndex = maxZ + 1
-            record.zIndex = maxZ + 1
+        let maxOtherZ = placements
+            .filter { $0.stickerID != record.id }
+            .map(\.zIndex)
+            .max()
+        if let maxOtherZ, placement.zIndex <= maxOtherZ {
+            let nextZ = maxOtherZ + 1
+            placement.zIndex = nextZ
+            record.zIndex = nextZ
             placement.updatedAt = Date()
             try? modelContext.save()
         }
@@ -386,9 +416,12 @@ struct StickerBoardView: View {
     private func deleteSticker(_ record: StickerRecord) {
         if selectedStickerID == record.id {
             selectedStickerID = nil
+            draftStickerID = nil
             draftTransform = nil
+            resetTransientGestureState()
         }
         try? StickerStorage.delete(record, in: modelContext)
+        onStickersMutated()
     }
 
     // MARK: - Viewport Helpers
@@ -404,6 +437,7 @@ struct StickerBoardView: View {
                 zoom: 1.0
             )
             selectedStickerID = focusID
+            draftStickerID = focusID
             draftTransform = DraftStickerTransform(placement: placement)
             reportViewportCenter()
             return

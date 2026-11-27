@@ -130,6 +130,60 @@ final class StickerStorageTests: XCTestCase {
     }
 
     @MainActor
+    func testStickerPaginationLoadsPagesInReverseChronologicalOrderAndHandlesMutations() throws {
+        let container = try StickerStorage.makeContainer(inMemory: true)
+        let context = container.mainContext
+
+        let base = Date(timeIntervalSince1970: 1_750_000_000)
+        for index in 0..<25 {
+            let record = StickerRecord(
+                createdAt: base.addingTimeInterval(TimeInterval(index * 60)),
+                pixelWidth: 200,
+                pixelHeight: 200
+            )
+            context.insert(record)
+        }
+        try context.save()
+
+        XCTAssertEqual(StickerStorage.fetchStickerCount(in: context), 25)
+
+        let pager = StickerGridPager(pageSize: 10)
+        pager.loadInitialIfNeeded(in: context)
+        XCTAssertEqual(pager.totalCount, 25)
+        XCTAssertEqual(pager.items.count, 10)
+        XCTAssertTrue(pager.hasMore)
+        XCTAssertEqual(pager.items.first?.createdAt, base.addingTimeInterval(24 * 60))
+
+        pager.loadNextPage(in: context)
+        XCTAssertEqual(pager.items.count, 20)
+        XCTAssertTrue(pager.hasMore)
+
+        pager.loadNextPage(in: context)
+        XCTAssertEqual(pager.items.count, 25)
+        XCTAssertFalse(pager.hasMore)
+        XCTAssertEqual(Set(pager.items.map(\.id)).count, 25)
+
+        // Calling loadNextPage again after reaching the end is a safe no-op.
+        pager.loadNextPage(in: context)
+        XCTAssertEqual(pager.items.count, 25)
+
+        // Deleting one item and reloading preserves loaded pages without collapsing.
+        let toDelete = try XCTUnwrap(pager.items.first)
+        try StickerStorage.delete(toDelete, in: context)
+        pager.reloadPreservingLoadedCount(in: context)
+        XCTAssertEqual(pager.totalCount, 24)
+        XCTAssertEqual(pager.items.count, 24)
+        XCTAssertFalse(pager.items.contains(where: { $0.id == toDelete.id }))
+
+        // Clearing everything empties the pager cleanly.
+        try StickerStorage.deleteAll(in: context)
+        pager.reloadPreservingLoadedCount(in: context)
+        XCTAssertEqual(pager.totalCount, 0)
+        XCTAssertTrue(pager.items.isEmpty)
+        XCTAssertFalse(pager.hasMore)
+    }
+
+    @MainActor
     func testStickerSessionProducesStickerWithoutFoodAnalyzer() async throws {
         let photo = TestImages.solid(width: 120, height: 120, color: RGB(r: 210, g: 120, b: 60))
         let fakeLifter = StubSubjectLifter(mask: SubjectMask(

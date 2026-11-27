@@ -31,10 +31,13 @@ enum StickerGridLayout {
     static let maxColumns = 5
     static let defaultColumns = 3
 
+    static let defaultShowCardFrame = false
+
     static let zoomInThreshold: CGFloat = 1.22
     static let zoomOutThreshold: CGFloat = 0.82
 
     private static let columnDefaultsKey = "yumoji.grid.columnCount"
+    private static let cardFrameDefaultsKey = "yumoji.grid.showCardFrame"
 
     static func clampColumns(_ count: Int) -> Int {
         min(maxColumns, max(minColumns, count))
@@ -49,6 +52,17 @@ enum StickerGridLayout {
 
     static func saveColumns(_ count: Int, to defaults: UserDefaults = .standard) {
         defaults.set(clampColumns(count), forKey: columnDefaultsKey)
+    }
+
+    static func loadShowCardFrame(from defaults: UserDefaults = .standard) -> Bool {
+        guard defaults.object(forKey: cardFrameDefaultsKey) != nil else {
+            return defaultShowCardFrame
+        }
+        return defaults.bool(forKey: cardFrameDefaultsKey)
+    }
+
+    static func saveShowCardFrame(_ show: Bool, to defaults: UserDefaults = .standard) {
+        defaults.set(show, forKey: cardFrameDefaultsKey)
     }
 
     /// Evaluates whether a pinch gesture relative magnification crosses the threshold

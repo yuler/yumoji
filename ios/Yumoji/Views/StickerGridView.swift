@@ -7,10 +7,15 @@ import UIKit
 @MainActor
 struct StickerGridView: View {
     let stickers: [StickerRecord]
+    let totalCount: Int
+    let hasMore: Bool
+    let isLoadingMore: Bool
+    let showCardFrame: Bool
     let cameraAvailable: Bool
     let onOpenCamera: () -> Void
     let onPhoto: (PhotoInput) -> Void
     let onSelectSticker: (StickerRecord) -> Void
+    let onLoadMore: () -> Void
 
     @Environment(LanguageManager.self) private var lang
 
@@ -53,6 +58,7 @@ struct StickerGridView: View {
                                 stickers: section.items,
                                 columnCount: columnCount,
                                 metrics: metrics,
+                                showCardFrame: showCardFrame,
                                 onTap: onSelectSticker
                             )
                             .padding(.horizontal, 14)
@@ -60,6 +66,8 @@ struct StickerGridView: View {
                             sectionHeader(section)
                         }
                     }
+
+                    paginationFooter
                 }
                 .padding(.top, 6)
                 .padding(.bottom, 112)
@@ -212,6 +220,32 @@ struct StickerGridView: View {
         .shadow(color: YumojiTheme.shadow.opacity(0.65), radius: 10, y: 4)
     }
 
+    @ViewBuilder
+    private var paginationFooter: some View {
+        if hasMore {
+            HStack(spacing: 8) {
+                ProgressView()
+                    .tint(YumojiTheme.inkSoft)
+                Text(lang.t("grid.loading_more"))
+                    .font(YumojiTheme.rounded(13, weight: .medium))
+                    .foregroundStyle(YumojiTheme.inkSoft)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 14)
+            .task(id: stickers.count) {
+                if !isLoadingMore {
+                    onLoadMore()
+                }
+            }
+        } else if totalCount > StickerGridPager.defaultPageSize {
+            Text(lang.t("grid.all_loaded", totalCount))
+                .font(YumojiTheme.rounded(12, weight: .medium))
+                .foregroundStyle(YumojiTheme.inkSoft.opacity(0.75))
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 10)
+        }
+    }
+
     private func updateVisibleMonth(from positions: [GridSectionPosition]) {
         guard !positions.isEmpty else { return }
         let sorted = positions.sorted { $0.minY < $1.minY }
@@ -247,6 +281,7 @@ private struct MasonrySectionGrid: View {
     let stickers: [StickerRecord]
     let columnCount: Int
     let metrics: GridCardMetrics
+    let showCardFrame: Bool
     let onTap: (StickerRecord) -> Void
 
     var body: some View {
@@ -263,6 +298,7 @@ private struct MasonrySectionGrid: View {
                         StickerGridCardView(
                             record: record,
                             metrics: metrics,
+                            showCardFrame: showCardFrame,
                             onTap: { onTap(record) }
                         )
                     }
@@ -277,6 +313,7 @@ private struct MasonrySectionGrid: View {
 private struct StickerGridCardView: View {
     let record: StickerRecord
     let metrics: GridCardMetrics
+    let showCardFrame: Bool
     let onTap: () -> Void
 
     @State private var thumbnail: UIImage?
@@ -287,15 +324,29 @@ private struct StickerGridCardView: View {
 
         Button(action: onTap) {
             ZStack {
-                shape
-                    .fill(YumojiTheme.card.opacity(0.92))
+                if showCardFrame {
+                    shape
+                        .fill(YumojiTheme.card.opacity(0.92))
+                        .overlay(
+                            shape.strokeBorder(YumojiTheme.ink.opacity(0.06), lineWidth: 1)
+                        )
+                        .shadow(color: YumojiTheme.shadow.opacity(0.32), radius: 6, y: 2)
+                }
 
                 if let image = thumbnail {
                     Image(uiImage: image)
                         .resizable()
                         .scaledToFit()
-                        .padding(metrics.contentPadding)
-                        .shadow(color: YumojiTheme.shadow.opacity(0.45), radius: 5, y: 2)
+                        .padding(
+                            showCardFrame
+                                ? metrics.contentPadding
+                                : max(2, metrics.contentPadding * 0.25)
+                        )
+                        .shadow(
+                            color: YumojiTheme.shadow.opacity(showCardFrame ? 0.45 : 0.62),
+                            radius: showCardFrame ? 5 : 6,
+                            y: showCardFrame ? 2 : 3
+                        )
                 } else {
                     ProgressView()
                         .tint(YumojiTheme.inkSoft)
@@ -303,11 +354,7 @@ private struct StickerGridCardView: View {
             }
             .frame(maxWidth: .infinity)
             .aspectRatio(displayAspect, contentMode: .fit)
-            .clipShape(shape)
-            .overlay(
-                shape.strokeBorder(YumojiTheme.ink.opacity(0.06), lineWidth: 1)
-            )
-            .shadow(color: YumojiTheme.shadow.opacity(0.32), radius: 6, y: 2)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .task(id: record.id) {
