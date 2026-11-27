@@ -111,6 +111,18 @@ final class LanguageManagerTests: XCTestCase {
         }
     }
 
+    func testLibraryPickerCopyIsASingleShortLabel() throws {
+        let expected = [
+            "en": "Library",
+            "zh-Hans": "相册",
+            "ja": "写真",
+        ]
+        for (code, copy) in expected {
+            let table = try loadStrings("Localizable", language: code)
+            XCTAssertEqual(table["home.pick_from_library"], copy, code)
+        }
+    }
+
     func testInfoPlistLocalizationTablesExist() throws {
         for code in ["zh-Hans", "en", "ja"] {
             let table = try loadStrings("InfoPlist", language: code)
