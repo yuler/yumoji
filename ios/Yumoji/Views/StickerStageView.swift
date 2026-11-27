@@ -12,8 +12,7 @@ struct StickerStageView: View {
     @Environment(LanguageManager.self) private var lang
     @Environment(SoundEffects.self) private var sound
 
-    @State private var containerWidth: CGFloat = UIScreen.main.bounds.width - 40
-    @State private var didMeasureWidth = false
+    @State private var containerWidth: CGFloat = max(UIScreen.main.bounds.width - 40, 1)
     @State private var photoPlacedAt: Date?
     @State private var breathing = false
     @State private var phase: CutoutRevealPhase = .scanning
@@ -27,7 +26,7 @@ struct StickerStageView: View {
     private let fallDuration: TimeInterval = 0.4
 
     var body: some View {
-        Group {
+        ZStack {
             if isProblem {
                 problemContent
                     .frame(maxWidth: .infinity)
@@ -50,35 +49,49 @@ struct StickerStageView: View {
                 )
                 .frame(maxWidth: .infinity)
                 .frame(height: size.height)
-                .background {
-                    GeometryReader { proxy in
-                        Color.clear.preference(key: StageWidthKey.self, value: proxy.size.width)
-                    }
-                }
-                .onPreferenceChange(StageWidthKey.self) { width in
-                    guard width > 1 else { return }
-                    containerWidth = width
-                    if !didMeasureWidth {
-                        didMeasureWidth = true
-                        if photoPlacedAt == nil {
-                            photoPlacedAt = Date()
-                        }
+                .onAppear {
+                    if photoPlacedAt == nil {
+                        photoPlacedAt = Date()
                     }
                 }
             }
         }
+        .frame(maxWidth: .infinity)
+        .background {
+            GeometryReader { proxy in
+                Color.clear.preference(key: StageWidthKey.self, value: proxy.size.width)
+            }
+        }
+        .onPreferenceChange(StageWidthKey.self) { width in
+            guard width > 1, abs(width - containerWidth) > 0.5 else { return }
+            containerWidth = width
+        }
         .animation(.easeOut(duration: 0.25), value: isProblem)
-        .task(id: "\(session.cutout)-\(session.photoImage != nil)-\(didMeasureWidth)") {
-            guard session.cutout == .ready, session.photoImage != nil, didMeasureWidth else { return }
+        .task(id: canReveal) {
+            guard canReveal else { return }
             await reveal()
         }
+        .onChange(of: session.photoImage == nil) { _, isNil in
+            if isNil {
+                resetRevealState()
+            } else if photoPlacedAt == nil {
+                photoPlacedAt = Date()
+            }
+        }
         .onAppear {
+            if session.photoImage != nil, photoPlacedAt == nil {
+                photoPlacedAt = Date()
+            }
             if !reduceMotion {
                 withAnimation(.easeInOut(duration: 0.9).repeatForever(autoreverses: true)) {
                     breathing = true
                 }
             }
         }
+    }
+
+    private var canReveal: Bool {
+        session.cutout == .ready && session.photoImage != nil && session.sticker != nil
     }
 
     private var isProblem: Bool {
@@ -92,9 +105,15 @@ struct StickerStageView: View {
         CGSize(width: photo.size.width * photo.scale, height: photo.size.height * photo.scale)
     }
 
+    private func resetRevealState() {
+        hasRevealed = false
+        phase = .scanning
+        phaseStartedAt = nil
+        photoPlacedAt = nil
+    }
+
     private func reveal() async {
-        guard !hasRevealed else { return }
-        guard session.photoImage != nil, didMeasureWidth, containerWidth > 1 else { return }
+        guard !hasRevealed, canReveal else { return }
         if photoPlacedAt == nil {
             photoPlacedAt = Date()
         }
@@ -102,7 +121,7 @@ struct StickerStageView: View {
         if remaining > 0 {
             try? await Task.sleep(for: .seconds(remaining))
         }
-        guard !Task.isCancelled, session.cutout == .ready, session.photoImage != nil else { return }
+        guard !Task.isCancelled, canReveal else { return }
         hasRevealed = true
         if sound.isEnabled {
             player.prepare()
