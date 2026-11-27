@@ -1,17 +1,29 @@
-/* Home */
-"home.tagline" = "おいしい一口を、ステッカーに。";
+/* Home & Board */
+"home.tagline" = "お気に入りを、そのままステッカーに。";
 "home.take_photo" = "写真を撮る";
 "home.pick_from_library" = "ライブラリから選ぶ";
 "home.camera_unavailable" = "このデバイスではカメラを使えません。ライブラリから選んでください。";
 "home.settings" = "設定";
 "home.version" = "バージョン %@";
 "home.version_accessibility" = "バージョン %@、設定を開く";
+"board.title" = "ステッカーボード";
+"board.count" = "%d 枚";
+"board.action.bring_front" = "最前面へ";
+"board.action.export" = "書き出し / 共有";
+"board.action.delete" = "削除";
+"board.delete.confirm.title" = "このステッカーを削除しますか？";
+"board.delete.confirm.action" = "削除";
+"board.delete.confirm.cancel" = "キャンセル";
+"board.hint.gestures" = "ドラッグで移動 · ピンチで拡縮と回転 · タップで操作";
 
 /* Result */
 "result.another" = "もう一枚";
-"result.title" = "ステッカー";
-"result.download" = "ダウンロード";
-"result.downloaded" = "保存済み";
+"result.title" = "新しいステッカー";
+"result.save_to_board" = "ボードに貼る";
+"result.saving" = "保存中…";
+"result.export_share" = "書き出し / 共有";
+"result.download" = "写真に保存";
+"result.downloaded" = "写真に保存済み";
 "result.share" = "共有";
 "result.share.preview" = "Yumoji ステッカー";
 "result.save.denied.title" = "写真に保存できません";
@@ -21,30 +33,33 @@
 "result.save.failed.title" = "保存できませんでした";
 "result.save.failed.message" = "もう一度試してください。";
 
+/* Export Sheet */
+"export.title" = "書き出しと共有";
+"export.done" = "完了";
+"export.background.label" = "背景色";
+"export.background.transparent" = "透過";
+"export.background.custom" = "カスタム";
+"export.background.custom.hint" = "カスタム色を長押しで削除";
+"export.background.remove" = "この色を削除";
+"export.format.transparent" = "透過 PNG · 元サイズ";
+"export.format.square" = "背景付き · 1:1 スクエア";
+
 /* Stage */
-"stage.no_subject.title" = "ステッカーにできる食べ物が見つかりません";
-"stage.no_subject.detail" = "角度を変えるか、料理が画面で目立つようにしてください。";
+"stage.no_subject.title" = "ステッカーにできる被写体が見つかりません";
+"stage.no_subject.detail" = "角度を変えるか、主役が画面で目立つようにしてください。";
 "stage.failed.title" = "切り抜きに失敗しました";
 "stage.failed.unreadable_photo" = "この写真を読み取れません。";
 "stage.failed.compose_failed" = "ステッカーを合成できませんでした。";
 "stage.pick_another" = "別の写真を選ぶ";
 
-/* Analysis */
-"analysis.loading" = "何を食べているか見ています…";
-"analysis.failed" = "未識別";
-"analysis.retry" = "再試行";
-"analysis.not_food" = "食べ物ではなさそうです";
-
 /* Tuning */
-"tuning.title" = "デバッグ · ステッカー設定";
-"tuning.border_ratio" = "白ふちの幅 borderRatio";
-"tuning.edge_smoothing" = "縁のなめらかさ edgeSmoothing";
-"tuning.margin_ratio" = "透明な余白 marginRatio";
+"tuning.title" = "ステッカーのふちを調整";
+"tuning.border_ratio" = "白ふちの幅";
+"tuning.edge_smoothing" = "縁のなめらかさ";
+"tuning.margin_ratio" = "透明な余白";
 "tuning.summary.subject" = "被写体の長辺 %d px · 白ふち %.1f px";
 "tuning.summary.sticker" = "ステッカー %d × %d px";
-"tuning.simulate_failure" = "次の識別を失敗させる";
 "tuning.reset_defaults" = "初期値に戻す";
-"tuning.reanalyze" = "識別し直す";
 
 /* Settings */
 "settings.title" = "設定";
@@ -57,6 +72,16 @@
 "settings.sound" = "効果音";
 "settings.language" = "言語";
 "settings.language.system" = "システムに従う";
+"settings.section.storage" = "ストレージ";
+"settings.storage.count.label" = "保存済みステッカー";
+"settings.storage.count.value" = "%d 枚";
+"settings.storage.size.label" = "使用容量";
+"settings.storage.clear" = "すべてのステッカーを削除";
+"settings.storage.clear.title" = "すべてのステッカーを削除しますか？";
+"settings.storage.clear.message" = "この端末に保存されている %d 枚のステッカーをすべて削除します。元に戻せません。";
+"settings.storage.clear.confirm" = "すべて削除";
+"settings.storage.clear.cancel" = "キャンセル";
+"settings.storage.footer" = "ステッカーは端末内に保存され、オフラインで利用できます。";
 "settings.section.about" = "情報";
 "settings.version.label" = "バージョン";
 "settings.update.check" = "アップデートを確認";

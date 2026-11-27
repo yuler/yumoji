@@ -1,14 +1,19 @@
 import PhotosUI
+import SwiftData
 import SwiftUI
 import UIKit
 
 @MainActor
 struct HomeView: View {
     let appVersion: String
+    let stickers: [StickerRecord]
+    @Binding var selectedStickerID: UUID?
+    @Binding var preferredDropY: Double
     /// Asks the parent to present the camera; it outlives this screen.
     let onOpenCamera: () -> Void
     let onPhoto: (PhotoInput) -> Void
     let onOpenSettings: () -> Void
+    let onExportSticker: (UIImage) -> Void
 
     @Environment(LanguageManager.self) private var lang
     @State private var pickerItem: PhotosPickerItem?
@@ -19,12 +24,28 @@ struct HomeView: View {
     }
 
     var body: some View {
+        if stickers.isEmpty {
+            emptyState
+        } else {
+            StickerBoardView(
+                stickers: stickers,
+                selectedStickerID: $selectedStickerID,
+                preferredDropY: $preferredDropY,
+                cameraAvailable: cameraAvailable,
+                onOpenCamera: onOpenCamera,
+                onPhoto: onPhoto,
+                onExportSticker: onExportSticker
+            )
+        }
+    }
+
+    private var emptyState: some View {
         VStack(spacing: 0) {
             Spacer()
 
-            Text("🍙")
-                .font(.system(size: 88))
-                .padding(.bottom, 20)
+            Text("✨")
+                .font(.system(size: 84))
+                .padding(.bottom, 18)
 
             Text("Yumoji")
                 .font(YumojiTheme.rounded(40, weight: .bold))

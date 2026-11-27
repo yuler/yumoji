@@ -23,23 +23,18 @@ enum CutoutState: Equatable {
     case failed(CutoutFailure)
 }
 
-enum AnalysisState: Equatable {
-    case loading
-    case loaded(FoodAnalysis)
-    case failed
-}
-
-/// One photo-to-sticker run: decodes the photo, then runs the cutout and the
-/// analysis side by side. Nothing is persisted.
+/// One photo-to-sticker run: decodes the photo, lifts the foreground subject,
+/// and composes a white-bordered transparent sticker ready for preview or saving.
 @Observable
 @MainActor
 final class StickerSession {
     private(set) var isActive = false
     private(set) var cutout: CutoutState = .working
-    private(set) var analysis: AnalysisState = .loading
     private(set) var sticker: UIImage?
     /// The decoded photo, kept so the stage can show it while the cutout runs.
     private(set) var photoImage: UIImage?
+    /// EXIF capture date for library photos, or shutter time for camera photos.
+    private(set) var capturedAt: Date?
     /// Where the sticker canvas sits in the photo, in photo pixels.
     private(set) var stickerCrop: PixelRect?
     /// Subject outline in photo pixels. Empty until the cutout is ready.
@@ -50,32 +45,22 @@ final class StickerSession {
     private(set) var subjectLongSide = 0
 
     var style = StickerStyle()
-    /// Debug switch: makes the next analysis fail so the failed state can be seen.
-    var simulateAnalysisFailure = false
 
     private let lifter: any SubjectLifting
-    private let analyzer: any FoodAnalyzing
 
-    @ObservationIgnored private var analysisLanguage: ResolvedLanguage = .zhHans
     @ObservationIgnored private var photo: CGImage?
     @ObservationIgnored private var mask: SubjectMask?
     @ObservationIgnored private var pipelineTask: Task<Void, Never>?
-    @ObservationIgnored private var analysisTask: Task<Void, Never>?
     @ObservationIgnored private var generation = 0
     @ObservationIgnored private var isRendering = false
     @ObservationIgnored private var renderPending = false
 
-    init(
-        lifter: any SubjectLifting = VisionSubjectLifter(),
-        analyzer: any FoodAnalyzing = MockFoodAnalyzer()
-    ) {
+    init(lifter: any SubjectLifting = VisionSubjectLifter()) {
         self.lifter = lifter
-        self.analyzer = analyzer
     }
 
-    func start(_ input: PhotoInput, language: ResolvedLanguage = .zhHans) {
+    func start(_ input: PhotoInput) {
         reset()
-        analysisLanguage = language
         isActive = true
         pipelineTask = Task {
             await self.run(input)
@@ -86,27 +71,18 @@ final class StickerSession {
     func reset() {
         pipelineTask?.cancel()
         pipelineTask = nil
-        analysisTask?.cancel()
-        analysisTask = nil
         generation += 1
         photo = nil
         mask = nil
         sticker = nil
         photoImage = nil
+        capturedAt = nil
         stickerCrop = nil
         subjectContour = []
         outsideMask = nil
         subjectLongSide = 0
         cutout = .working
-        analysis = .loading
         isActive = false
-    }
-
-    func retryAnalysis(language: ResolvedLanguage? = nil) {
-        if let language {
-            analysisLanguage = language
-        }
-        startAnalysis()
     }
 
     /// Re-renders the sticker from the mask already computed. Call after `style` changes.
@@ -124,12 +100,12 @@ final class StickerSession {
             return
         }
 
-        photo = loaded
-        photoImage = UIImage(cgImage: loaded)
-        startAnalysis()
+        photo = loaded.image
+        photoImage = UIImage(cgImage: loaded.image)
+        capturedAt = loaded.capturedAt
 
         do {
-            let lifted = try await lifter.liftSubject(from: loaded)
+            let lifted = try await lifter.liftSubject(from: loaded.image)
             guard !Task.isCancelled else { return }
             guard let bounds = lifted.bounds else {
                 throw SubjectLiftingError.noSubject
@@ -139,51 +115,28 @@ final class StickerSession {
             requestRender()
         } catch SubjectLiftingError.noSubject {
             guard !Task.isCancelled else { return }
-            analysisTask?.cancel()
             cutout = .noSubject
         } catch {
             guard !Task.isCancelled else { return }
-            analysisTask?.cancel()
             cutout = .failed(.message(error.localizedDescription))
         }
     }
 
-    private func loadPhoto(_ input: PhotoInput) async -> CGImage? {
+    private func loadPhoto(_ input: PhotoInput) async -> DecodedPhoto? {
         switch input {
         case .camera(let image):
+            let now = Date()
             return await Task.detached(priority: .userInitiated) {
-                PhotoLoader.decode(image)
+                guard let decoded = PhotoLoader.decode(image) else { return nil }
+                return DecodedPhoto(image: decoded, capturedAt: now)
             }.value
         case .library(let item):
             guard let data = try? await item.loadTransferable(type: Data.self) else {
                 return nil
             }
             return await Task.detached(priority: .userInitiated) {
-                PhotoLoader.decode(data)
+                PhotoLoader.decodeWithMetadata(data)
             }.value
-        }
-    }
-
-    // MARK: - Analysis
-
-    private func startAnalysis() {
-        analysisTask?.cancel()
-        guard let currentPhoto = photo else { return }
-        analysis = .loading
-        let shouldFail = simulateAnalysisFailure
-        let language = analysisLanguage
-        analysisTask = Task {
-            do {
-                let result = try await self.analyzer.analyze(currentPhoto, language: language)
-                guard !Task.isCancelled else { return }
-                if shouldFail {
-                    throw FoodAnalysisError.unavailable
-                }
-                self.analysis = .loaded(result)
-            } catch {
-                guard !Task.isCancelled else { return }
-                self.analysis = .failed
-            }
         }
     }
 
