@@ -8,6 +8,10 @@
 "home.version_accessibility" = "版本 %@，打开设置";
 "grid.title" = "贴纸";
 "grid.open_board" = "打开画板";
+"grid.frame.show" = "显示背景框";
+"grid.frame.hide" = "隐藏背景框";
+"grid.loading_more" = "正在加载更多…";
+"grid.all_loaded" = "已加载全部 %d 枚";
 "detail.title" = "贴纸详情";
 "detail.view_on_board" = "在画板中查看";
 "board.title" = "画板";

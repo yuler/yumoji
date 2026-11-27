@@ -7,11 +7,16 @@ import UIKit
 struct HomeView: View {
     let appVersion: String
     let stickers: [StickerRecord]
+    let totalCount: Int
+    let hasMore: Bool
+    let isLoadingMore: Bool
+    let showCardFrame: Bool
     /// Asks the parent to present the camera; it outlives this screen.
     let onOpenCamera: () -> Void
     let onPhoto: (PhotoInput) -> Void
     let onOpenSettings: () -> Void
     let onSelectSticker: (StickerRecord) -> Void
+    let onLoadMore: () -> Void
 
     @Environment(LanguageManager.self) private var lang
     @State private var pickerItem: PhotosPickerItem?
@@ -22,15 +27,20 @@ struct HomeView: View {
     }
 
     var body: some View {
-        if stickers.isEmpty {
+        if totalCount == 0 && stickers.isEmpty {
             emptyState
         } else {
             StickerGridView(
                 stickers: stickers,
+                totalCount: totalCount,
+                hasMore: hasMore,
+                isLoadingMore: isLoadingMore,
+                showCardFrame: showCardFrame,
                 cameraAvailable: cameraAvailable,
                 onOpenCamera: onOpenCamera,
                 onPhoto: onPhoto,
-                onSelectSticker: onSelectSticker
+                onSelectSticker: onSelectSticker,
+                onLoadMore: onLoadMore
             )
         }
     }
