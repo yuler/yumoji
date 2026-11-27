@@ -1,57 +1,14 @@
 import CoreGraphics
+import ImageIO
 import UIKit
+import UniformTypeIdentifiers
 import XCTest
 @testable import Yumoji
 
-/// The upload image helper and the photo decoder.
+/// Photo decoding and EXIF capture-date extraction.
 final class PhotoPreparationTests: XCTestCase {
     private let red = RGB(r: 220, g: 40, b: 40)
     private let blue = RGB(r: 40, g: 60, b: 220)
-
-    // MARK: - Upload image
-
-    func testScaledSizeBringsLongSideTo1024AndKeepsAspectRatio() {
-        let landscape = UploadImage.scaledSize(width: 4032, height: 3024)
-        XCTAssertEqual(landscape.width, 1024)
-        XCTAssertEqual(landscape.height, 768)
-
-        let portrait = UploadImage.scaledSize(width: 3024, height: 4032)
-        XCTAssertEqual(portrait.width, 768)
-        XCTAssertEqual(portrait.height, 1024)
-    }
-
-    func testScaledSizeNeverUpscales() {
-        let small = UploadImage.scaledSize(width: 800, height: 600)
-        XCTAssertEqual(small.width, 800)
-        XCTAssertEqual(small.height, 600)
-
-        let exact = UploadImage.scaledSize(width: 1024, height: 1024)
-        XCTAssertEqual(exact.width, 1024)
-        XCTAssertEqual(exact.height, 1024)
-    }
-
-    func testUploadDataIsJPEGWithLongSide1024() throws {
-        let photo = TestImages.solid(width: 1600, height: 800, color: red)
-        let data = try XCTUnwrap(UploadImage.jpegData(from: photo))
-
-        // JPEG files start with the SOI marker FF D8.
-        XCTAssertEqual(Array(data.prefix(2)), [0xFF, 0xD8])
-
-        let decoded = try XCTUnwrap(UIImage(data: data)?.cgImage)
-        XCTAssertEqual(decoded.width, 1024)
-        XCTAssertEqual(decoded.height, 512)
-    }
-
-    func testUploadDataKeepsSmallImagesAtTheirSize() throws {
-        let photo = TestImages.solid(width: 300, height: 200, color: blue)
-        let data = try XCTUnwrap(UploadImage.jpegData(from: photo))
-
-        let decoded = try XCTUnwrap(UIImage(data: data)?.cgImage)
-        XCTAssertEqual(decoded.width, 300)
-        XCTAssertEqual(decoded.height, 200)
-    }
-
-    // MARK: - Photo decoder
 
     func testDecodeBakesOrientationIntoPixels() throws {
         // Stored pixels are 60 x 40, left half red and right half blue, flagged
@@ -90,5 +47,42 @@ final class PhotoPreparationTests: XCTestCase {
 
     func testDecodeRejectsDataThatIsNotAnImage() {
         XCTAssertNil(PhotoLoader.decode(Data("not an image".utf8)))
+        XCTAssertNil(PhotoLoader.decodeWithMetadata(Data("not an image".utf8)))
+    }
+
+    func testParseExifDateHandlesStandardFormat() throws {
+        let utc = try XCTUnwrap(TimeZone(secondsFromGMT: 0))
+        let parsed = try XCTUnwrap(PhotoLoader.parseExifDate("2026:08:15 14:30:22", timeZone: utc))
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = utc
+        let comps = calendar.dateComponents([.year, .month, .day, .hour, .minute, .second], from: parsed)
+        XCTAssertEqual(comps.year, 2026)
+        XCTAssertEqual(comps.month, 8)
+        XCTAssertEqual(comps.day, 15)
+        XCTAssertEqual(comps.hour, 14)
+        XCTAssertEqual(comps.minute, 30)
+        XCTAssertEqual(comps.second, 22)
+        XCTAssertNil(PhotoLoader.parseExifDate("invalid"))
+    }
+
+    func testDecodeWithMetadataExtractsExifCaptureDate() throws {
+        let photo = TestImages.solid(width: 120, height: 80, color: blue)
+        let output = NSMutableData()
+        let destination = try XCTUnwrap(
+            CGImageDestinationCreateWithData(output, UTType.jpeg.identifier as CFString, 1, nil)
+        )
+        let properties: [CFString: Any] = [
+            kCGImagePropertyExifDictionary: [
+                kCGImagePropertyExifDateTimeOriginal: "2026:05:20 18:45:00",
+            ],
+        ]
+        CGImageDestinationAddImage(destination, photo, properties as CFDictionary)
+        XCTAssertTrue(CGImageDestinationFinalize(destination))
+
+        let decoded = try XCTUnwrap(PhotoLoader.decodeWithMetadata(output as Data))
+        XCTAssertEqual(decoded.image.width, 120)
+        XCTAssertEqual(decoded.image.height, 80)
+        let expected = try XCTUnwrap(PhotoLoader.parseExifDate("2026:05:20 18:45:00"))
+        XCTAssertEqual(decoded.capturedAt, expected)
     }
 }

@@ -1,17 +1,29 @@
-/* Home */
-"home.tagline" = "把每一口好吃的，收成一枚贴纸";
+/* Home & Board */
+"home.tagline" = "把眼前喜欢的一切，收成一枚贴纸";
 "home.take_photo" = "拍一张";
 "home.pick_from_library" = "从相册选一张";
 "home.camera_unavailable" = "这台设备没有可用的相机，请从相册选择";
 "home.settings" = "设置";
 "home.version" = "版本 %@";
 "home.version_accessibility" = "版本 %@，打开设置";
+"board.title" = "贴纸板";
+"board.count" = "%d 枚";
+"board.action.bring_front" = "置顶";
+"board.action.export" = "导出 / 分享";
+"board.action.delete" = "删除";
+"board.delete.confirm.title" = "删除这枚贴纸？";
+"board.delete.confirm.action" = "删除";
+"board.delete.confirm.cancel" = "取消";
+"board.hint.gestures" = "拖动摆放 · 双指缩放旋转 · 点击操作";
 
 /* Result */
 "result.another" = "再来一张";
-"result.title" = "贴纸";
-"result.download" = "下载";
-"result.downloaded" = "已保存";
+"result.title" = "新贴纸";
+"result.save_to_board" = "贴到看板";
+"result.saving" = "正在保存…";
+"result.export_share" = "导出 / 分享";
+"result.download" = "保存到相册";
+"result.downloaded" = "已保存到相册";
 "result.share" = "分享";
 "result.share.preview" = "Yumoji 贴纸";
 "result.save.denied.title" = "无法保存到相册";
@@ -21,30 +33,33 @@
 "result.save.failed.title" = "没有保存成功";
 "result.save.failed.message" = "请再试一次。";
 
+/* Export Sheet */
+"export.title" = "导出与分享";
+"export.done" = "完成";
+"export.background.label" = "背景色";
+"export.background.transparent" = "透明";
+"export.background.custom" = "自定义";
+"export.background.custom.hint" = "长按自定义色块可移除";
+"export.background.remove" = "移除此颜色";
+"export.format.transparent" = "透明 PNG · 原尺寸";
+"export.format.square" = "带背景 · 1:1 方形";
+
 /* Stage */
-"stage.no_subject.title" = "没找到可以做成贴纸的食物";
-"stage.no_subject.detail" = "换个角度，或者让食物在画面里更突出一些。";
+"stage.no_subject.title" = "没找到可以抠成贴纸的主体";
+"stage.no_subject.detail" = "换个角度，或者让画面里的主角更突出一些。";
 "stage.failed.title" = "抠图没有成功";
 "stage.failed.unreadable_photo" = "这张照片读不出来";
 "stage.failed.compose_failed" = "贴纸合成失败";
 "stage.pick_another" = "换一张照片";
 
-/* Analysis */
-"analysis.loading" = "正在认这是什么好吃的…";
-"analysis.failed" = "待识别";
-"analysis.retry" = "重试";
-"analysis.not_food" = "这个好像不是吃的";
-
 /* Tuning */
-"tuning.title" = "调试 · 贴纸参数";
-"tuning.border_ratio" = "白边宽度 borderRatio";
-"tuning.edge_smoothing" = "白边平滑 edgeSmoothing";
-"tuning.margin_ratio" = "透明留白 marginRatio";
+"tuning.title" = "调整贴纸白边";
+"tuning.border_ratio" = "白边宽度";
+"tuning.edge_smoothing" = "边缘平滑";
+"tuning.margin_ratio" = "透明留白";
 "tuning.summary.subject" = "主体长边 %d px · 白边 %.1f px";
 "tuning.summary.sticker" = "贴纸 %d × %d px";
-"tuning.simulate_failure" = "下次识别模拟失败";
 "tuning.reset_defaults" = "恢复默认参数";
-"tuning.reanalyze" = "重新识别";
 
 /* Settings */
 "settings.title" = "设置";
@@ -57,6 +72,16 @@
 "settings.sound" = "音效";
 "settings.language" = "语言";
 "settings.language.system" = "跟随系统";
+"settings.section.storage" = "存储空间";
+"settings.storage.count.label" = "已保存贴纸";
+"settings.storage.count.value" = "%d 枚";
+"settings.storage.size.label" = "占用空间";
+"settings.storage.clear" = "清空全部贴纸";
+"settings.storage.clear.title" = "清空全部贴纸？";
+"settings.storage.clear.message" = "将删除本地保存的所有 %d 枚贴纸，此操作无法撤销。";
+"settings.storage.clear.confirm" = "清空";
+"settings.storage.clear.cancel" = "取消";
+"settings.storage.footer" = "贴纸保存在本机，不依赖网络。";
 "settings.section.about" = "关于";
 "settings.version.label" = "当前版本";
 "settings.update.check" = "检查更新";

@@ -1,17 +1,29 @@
-/* Home */
-"home.tagline" = "Every yummy bite, a sticker.";
+/* Home & Board */
+"home.tagline" = "Turn anything you love into a sticker.";
 "home.take_photo" = "Take a Photo";
 "home.pick_from_library" = "Choose from Library";
 "home.camera_unavailable" = "Camera is unavailable on this device. Choose from Library instead.";
 "home.settings" = "Settings";
 "home.version" = "Version %@";
 "home.version_accessibility" = "Version %@, open Settings";
+"board.title" = "Sticker Board";
+"board.count" = "%d";
+"board.action.bring_front" = "Bring to Front";
+"board.action.export" = "Export / Share";
+"board.action.delete" = "Delete";
+"board.delete.confirm.title" = "Delete this sticker?";
+"board.delete.confirm.action" = "Delete";
+"board.delete.confirm.cancel" = "Cancel";
+"board.hint.gestures" = "Drag to place · Pinch & rotate · Tap for actions";
 
 /* Result */
 "result.another" = "Another";
-"result.title" = "Sticker";
-"result.download" = "Download";
-"result.downloaded" = "Saved";
+"result.title" = "New Sticker";
+"result.save_to_board" = "Stick to Board";
+"result.saving" = "Saving…";
+"result.export_share" = "Export / Share";
+"result.download" = "Save to Photos";
+"result.downloaded" = "Saved to Photos";
 "result.share" = "Share";
 "result.share.preview" = "Yumoji sticker";
 "result.save.denied.title" = "Photos Access Needed";
@@ -21,30 +33,33 @@
 "result.save.failed.title" = "Couldn't Save";
 "result.save.failed.message" = "Try again.";
 
+/* Export Sheet */
+"export.title" = "Export & Share";
+"export.done" = "Done";
+"export.background.label" = "Background";
+"export.background.transparent" = "None";
+"export.background.custom" = "Custom";
+"export.background.custom.hint" = "Long press a custom swatch to remove";
+"export.background.remove" = "Remove Color";
+"export.format.transparent" = "Transparent PNG · Original size";
+"export.format.square" = "With background · 1:1 Square";
+
 /* Stage */
-"stage.no_subject.title" = "Couldn't find food to turn into a sticker";
-"stage.no_subject.detail" = "Try another angle or make the dish stand out more.";
+"stage.no_subject.title" = "Couldn't find a subject for a sticker";
+"stage.no_subject.detail" = "Try another angle or make the main subject stand out more.";
 "stage.failed.title" = "Cutout failed";
 "stage.failed.unreadable_photo" = "Unable to read this photo.";
 "stage.failed.compose_failed" = "Couldn't compose the sticker.";
 "stage.pick_another" = "Pick Another Photo";
 
-/* Analysis */
-"analysis.loading" = "Figuring out what's on your plate…";
-"analysis.failed" = "Not Identified";
-"analysis.retry" = "Retry";
-"analysis.not_food" = "Doesn't look like food";
-
 /* Tuning */
-"tuning.title" = "Debug · Sticker Parameters";
-"tuning.border_ratio" = "Border Width (borderRatio)";
-"tuning.edge_smoothing" = "Edge Smoothing (edgeSmoothing)";
-"tuning.margin_ratio" = "Transparent Margin (marginRatio)";
+"tuning.title" = "Adjust Sticker Border";
+"tuning.border_ratio" = "Border Width";
+"tuning.edge_smoothing" = "Edge Smoothing";
+"tuning.margin_ratio" = "Transparent Margin";
 "tuning.summary.subject" = "Subject %d px · Border %.1f px";
 "tuning.summary.sticker" = "Sticker %d × %d px";
-"tuning.simulate_failure" = "Simulate failure on next analysis";
 "tuning.reset_defaults" = "Reset Defaults";
-"tuning.reanalyze" = "Re-analyze";
 
 /* Settings */
 "settings.title" = "Settings";
@@ -57,6 +72,16 @@
 "settings.sound" = "Sound";
 "settings.language" = "Language";
 "settings.language.system" = "Follow System";
+"settings.section.storage" = "Storage";
+"settings.storage.count.label" = "Saved Stickers";
+"settings.storage.count.value" = "%d";
+"settings.storage.size.label" = "Storage Used";
+"settings.storage.clear" = "Clear All Stickers";
+"settings.storage.clear.title" = "Clear All Stickers?";
+"settings.storage.clear.message" = "This will permanently delete all %d stickers stored on this device.";
+"settings.storage.clear.confirm" = "Clear All";
+"settings.storage.clear.cancel" = "Cancel";
+"settings.storage.footer" = "Stickers are stored locally on this device and work offline.";
 "settings.section.about" = "About";
 "settings.version.label" = "Version";
 "settings.update.check" = "Check for Updates";

@@ -1,8 +1,7 @@
 import SwiftUI
 import UIKit
 
-/// Debug-only sliders for `StickerStyle`. The sticker re-renders live from the
-/// mask already computed, and the numbers shown are the ones to report back.
+/// Sliders for tuning `StickerStyle` before sticking to the board.
 @MainActor
 struct StickerTuningView: View {
     @Bindable var session: StickerSession
@@ -21,18 +20,8 @@ struct StickerTuningView: View {
                     .foregroundStyle(YumojiTheme.inkSoft)
                     .textSelection(.enabled)
 
-                Toggle(lang.t("tuning.simulate_failure"), isOn: $session.simulateAnalysisFailure)
-                    .font(YumojiTheme.rounded(13))
-                    .foregroundStyle(YumojiTheme.ink)
-
-                HStack {
-                    Button(lang.t("tuning.reset_defaults")) {
-                        session.style = StickerStyle()
-                    }
-                    Spacer()
-                    Button(lang.t("tuning.reanalyze")) {
-                        session.retryAnalysis(language: lang.resolved)
-                    }
+                Button(lang.t("tuning.reset_defaults")) {
+                    session.style = StickerStyle()
                 }
                 .font(YumojiTheme.rounded(13, weight: .semibold))
             }

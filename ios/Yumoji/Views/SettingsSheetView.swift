@@ -1,3 +1,4 @@
+import SwiftData
 import SwiftUI
 import UIKit
 
@@ -6,14 +7,18 @@ struct SettingsSheetView: View {
     let appVersion: String
     let installChannel: InstallChannel
     var updateChecker: AppUpdateChecker = AppUpdateChecker()
+    var onClearedStickers: () -> Void = {}
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
     @Environment(ThemeManager.self) private var themeManager
     @Environment(LanguageManager.self) private var lang
     @Environment(SoundEffects.self) private var sound
 
     @State private var isChecking = false
     @State private var checkResult: AppUpdate.CheckResult?
+    @State private var storageStats: StickerStorageStats = .empty
+    @State private var showClearConfirm = false
 
     private var themeBinding: Binding<ThemeMode> {
         Binding(
@@ -40,6 +45,7 @@ struct SettingsSheetView: View {
         NavigationStack {
             Form {
                 generalSection
+                storageSection
                 aboutSection
             }
             .formStyle(.grouped)
@@ -59,6 +65,21 @@ struct SettingsSheetView: View {
             }
         }
         .tint(YumojiTheme.accent)
+        .onAppear {
+            refreshStorageStats()
+        }
+        .confirmationDialog(
+            lang.t("settings.storage.clear.title"),
+            isPresented: $showClearConfirm,
+            titleVisibility: .visible
+        ) {
+            Button(lang.t("settings.storage.clear.confirm"), role: .destructive) {
+                clearAllStickers()
+            }
+            Button(lang.t("settings.storage.clear.cancel"), role: .cancel) {}
+        } message: {
+            Text(lang.t("settings.storage.clear.message", storageStats.count))
+        }
     }
 
     private var generalSection: some View {
@@ -110,6 +131,42 @@ struct SettingsSheetView: View {
             .id(lang.resolved)
         } header: {
             Text(lang.t("settings.section.general"))
+                .foregroundStyle(YumojiTheme.inkSoft)
+        }
+        .listRowBackground(YumojiTheme.card)
+    }
+
+    private var storageSection: some View {
+        Section {
+            LabeledContent {
+                Text(lang.t("settings.storage.count.value", storageStats.count))
+                    .foregroundStyle(YumojiTheme.inkSoft)
+                    .monospacedDigit()
+            } label: {
+                Text(lang.t("settings.storage.count.label"))
+                    .foregroundStyle(YumojiTheme.ink)
+            }
+
+            LabeledContent {
+                Text(formattedStorageSize)
+                    .foregroundStyle(YumojiTheme.inkSoft)
+                    .monospacedDigit()
+            } label: {
+                Text(lang.t("settings.storage.size.label"))
+                    .foregroundStyle(YumojiTheme.ink)
+            }
+
+            Button(role: .destructive) {
+                showClearConfirm = true
+            } label: {
+                Text(lang.t("settings.storage.clear"))
+            }
+            .disabled(storageStats.count == 0)
+        } header: {
+            Text(lang.t("settings.section.storage"))
+                .foregroundStyle(YumojiTheme.inkSoft)
+        } footer: {
+            Text(lang.t("settings.storage.footer"))
                 .foregroundStyle(YumojiTheme.inkSoft)
         }
         .listRowBackground(YumojiTheme.card)
@@ -172,6 +229,10 @@ struct SettingsSheetView: View {
         .listRowBackground(YumojiTheme.card)
     }
 
+    private var formattedStorageSize: String {
+        ByteCountFormatter.string(fromByteCount: storageStats.totalBytes, countStyle: .file)
+    }
+
     private var updateStatusFooter: String? {
         guard let checkResult else { return nil }
         switch checkResult {
@@ -184,6 +245,16 @@ struct SettingsSheetView: View {
         case .available(let version, _):
             return lang.t("settings.update.available", version)
         }
+    }
+
+    private func refreshStorageStats() {
+        storageStats = StickerStorage.stats(in: modelContext)
+    }
+
+    private func clearAllStickers() {
+        try? StickerStorage.deleteAll(in: modelContext)
+        refreshStorageStats()
+        onClearedStickers()
     }
 
     private func checkForUpdate() async {
