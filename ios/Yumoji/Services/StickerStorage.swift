@@ -20,9 +20,15 @@ enum StickerStorageError: Error {
     case encodingFailed
 }
 
-/// Manages the local SwiftData store (SQLite + external binary assets) and storage stats.
+/// Manages the local SwiftData store (SQLite + external binary assets),
+/// decoupled board layout persistence, and storage stats.
 enum StickerStorage {
-    static let schema = Schema([StickerRecord.self, StickerAsset.self])
+    static let schema = Schema([
+        StickerRecord.self,
+        StickerAsset.self,
+        BoardLayoutRecord.self,
+        BoardItemPlacement.self
+    ])
 
     /// Dedicated subfolder under Application Support so disk usage reflects only sticker storage.
     static var defaultDirectory: URL {
@@ -57,7 +63,7 @@ enum StickerStorage {
         return try ModelContainer(for: schema, configurations: [config])
     }
 
-    /// Computes a gentle, non-overlapping initial drop position near the current viewport center.
+    /// Legacy placement helper preserved for compatibility with existing callers/tests.
     static func nextPlacement(existingCount: Int, maxZIndex: Int, preferredY: Double) -> StickerPlacement {
         let xOffsets: [Double] = [0.0, -0.14, 0.14, -0.09, 0.11, -0.16, 0.08]
         let yOffsets: [Double] = [0.0, 26.0, -20.0, 44.0, -34.0, 16.0, 52.0]
@@ -74,33 +80,42 @@ enum StickerStorage {
         )
     }
 
+    /// Saves a sticker to the library AND creates a decoupled placement on the default board.
     @MainActor
     static func saveSticker(
         _ image: CGImage,
         capturedAt: Date?,
-        preferredY: Double,
+        preferredAnchor: CGPoint? = nil,
+        boardID: String = StickerRecord.defaultBoardID,
         in context: ModelContext
     ) throws -> StickerRecord {
         guard let prepared = StickerImageSizer.prepareForStorage(image) else {
             throw StickerStorageError.encodingFailed
         }
 
-        let existing = (try? context.fetch(FetchDescriptor<StickerRecord>())) ?? []
-        let maxZ = existing.map(\.zIndex).max() ?? 0
-        let placement = nextPlacement(
-            existingCount: existing.count,
+        let existingRecords = (try? context.fetch(FetchDescriptor<StickerRecord>())) ?? []
+        let existingPlacements = fetchPlacements(boardID: boardID, in: context)
+        let maxZ = max(
+            existingRecords.map(\.zIndex).max() ?? 0,
+            existingPlacements.map(\.zIndex).max() ?? 0
+        )
+
+        let anchor = preferredAnchor ?? defaultAnchor(boardID: boardID, existingPlacements: existingPlacements, in: context)
+        let worldPlacement = BoardCanvasMath.nextWorldPlacement(
+            existingCount: existingPlacements.count,
             maxZIndex: maxZ,
-            preferredY: preferredY
+            around: anchor
         )
 
         let asset = StickerAsset(pngData: prepared.pngData)
         let record = StickerRecord(
+            boardID: boardID,
             capturedAt: capturedAt,
-            x: placement.x,
-            y: placement.y,
+            x: 0.5,
+            y: 260,
             scale: 1.0,
-            rotation: placement.rotation,
-            zIndex: placement.zIndex,
+            rotation: worldPlacement.rotation,
+            zIndex: worldPlacement.zIndex,
             pixelWidth: prepared.pixelWidth,
             pixelHeight: prepared.pixelHeight,
             byteSize: prepared.byteSize,
@@ -109,8 +124,146 @@ enum StickerStorage {
         )
         asset.sticker = record
         context.insert(record)
+
+        let placement = BoardItemPlacement(
+            boardID: boardID,
+            stickerID: record.id,
+            x: worldPlacement.x,
+            y: worldPlacement.y,
+            scale: 1.0,
+            rotation: worldPlacement.rotation,
+            zIndex: worldPlacement.zIndex
+        )
+        context.insert(placement)
         try context.save()
         return record
+    }
+
+    /// Convenience overload matching previous API signature.
+    @MainActor
+    static func saveSticker(
+        _ image: CGImage,
+        capturedAt: Date?,
+        preferredY: Double,
+        in context: ModelContext
+    ) throws -> StickerRecord {
+        let anchor = BoardCanvasMath.migrateLegacyCoordinate(normalizedX: 0.5, legacyY: preferredY)
+        return try saveSticker(image, capturedAt: capturedAt, preferredAnchor: anchor, in: context)
+    }
+
+    /// Ensures every persisted `StickerRecord` has a corresponding `BoardItemPlacement`,
+    /// seamlessly migrating coordinates from earlier builds.
+    @MainActor
+    @discardableResult
+    static func ensureBoardPlacements(
+        for records: [StickerRecord],
+        boardID: String = StickerRecord.defaultBoardID,
+        in context: ModelContext
+    ) -> [BoardItemPlacement] {
+        var existing = fetchPlacements(boardID: boardID, in: context)
+        let existingByStickerID = Dictionary(uniqueKeysWithValues: existing.map { ($0.stickerID, $0) })
+        var didInsert = false
+
+        for record in records where existingByStickerID[record.id] == nil {
+            let migrated = BoardCanvasMath.migrateLegacyCoordinate(
+                normalizedX: record.x,
+                legacyY: record.y
+            )
+            let placement = BoardItemPlacement(
+                boardID: boardID,
+                stickerID: record.id,
+                x: Double(migrated.x),
+                y: Double(migrated.y),
+                scale: BoardCanvasMath.clampStickerScale(record.scale),
+                rotation: record.rotation,
+                zIndex: record.zIndex
+            )
+            context.insert(placement)
+            existing.append(placement)
+            didInsert = true
+        }
+
+        // Remove orphaned placements whose sticker no longer exists.
+        let validIDs = Set(records.map(\.id))
+        var didDelete = false
+        for placement in existing where !validIDs.contains(placement.stickerID) {
+            context.delete(placement)
+            didDelete = true
+        }
+
+        if didInsert || didDelete {
+            try? context.save()
+            existing = fetchPlacements(boardID: boardID, in: context)
+        }
+        return existing
+    }
+
+    @MainActor
+    static func fetchPlacements(
+        boardID: String = StickerRecord.defaultBoardID,
+        in context: ModelContext
+    ) -> [BoardItemPlacement] {
+        let all = (try? context.fetch(FetchDescriptor<BoardItemPlacement>())) ?? []
+        return all.filter { $0.boardID == boardID }
+    }
+
+    @MainActor
+    static func loadBoardViewport(
+        boardID: String = StickerRecord.defaultBoardID,
+        in context: ModelContext
+    ) -> BoardViewport? {
+        guard let record = fetchLayoutRecord(boardID: boardID, in: context),
+              record.hasSavedViewport
+        else {
+            return nil
+        }
+        return BoardViewport(
+            offset: CGSize(width: record.offsetX, height: record.offsetY),
+            zoom: BoardCanvasMath.clampCanvasZoom(CGFloat(record.zoomScale))
+        )
+    }
+
+    @MainActor
+    static func saveBoardViewport(
+        _ viewport: BoardViewport,
+        boardID: String = StickerRecord.defaultBoardID,
+        in context: ModelContext
+    ) {
+        let record = fetchLayoutRecord(boardID: boardID, in: context) ?? {
+            let created = BoardLayoutRecord(boardID: boardID)
+            context.insert(created)
+            return created
+        }()
+        record.offsetX = Double(viewport.offset.width)
+        record.offsetY = Double(viewport.offset.height)
+        record.zoomScale = Double(BoardCanvasMath.clampCanvasZoom(viewport.zoom))
+        record.hasSavedViewport = true
+        record.updatedAt = Date()
+        try? context.save()
+    }
+
+    @MainActor
+    private static func fetchLayoutRecord(
+        boardID: String,
+        in context: ModelContext
+    ) -> BoardLayoutRecord? {
+        let all = (try? context.fetch(FetchDescriptor<BoardLayoutRecord>())) ?? []
+        return all.first { $0.boardID == boardID }
+    }
+
+    @MainActor
+    private static func defaultAnchor(
+        boardID: String,
+        existingPlacements: [BoardItemPlacement],
+        in context: ModelContext
+    ) -> CGPoint {
+        if let savedViewport = loadBoardViewport(boardID: boardID, in: context) {
+            return BoardCanvasMath.visibleWorldCenter(viewport: savedViewport)
+        }
+        if let latest = existingPlacements.max(by: { $0.zIndex < $1.zIndex }) {
+            return CGPoint(x: latest.x, y: latest.y)
+        }
+        return .zero
     }
 
     @MainActor
@@ -129,8 +282,14 @@ enum StickerStorage {
 
     @MainActor
     static func delete(_ record: StickerRecord, in context: ModelContext) throws {
+        let targetID = record.id
+        let allPlacements = (try? context.fetch(FetchDescriptor<BoardItemPlacement>())) ?? []
+        for placement in allPlacements where placement.stickerID == targetID {
+            context.delete(placement)
+        }
         context.delete(record)
         try context.save()
+        StickerThumbnailCache.shared.invalidate(targetID)
     }
 
     @MainActor
@@ -143,7 +302,16 @@ enum StickerStorage {
         for asset in orphanAssets {
             context.delete(asset)
         }
+        let placements = try context.fetch(FetchDescriptor<BoardItemPlacement>())
+        for placement in placements {
+            context.delete(placement)
+        }
+        let layouts = try context.fetch(FetchDescriptor<BoardLayoutRecord>())
+        for layout in layouts {
+            context.delete(layout)
+        }
         try context.save()
+        StickerThumbnailCache.shared.clear()
     }
 
     /// Recursively totals regular file sizes inside a storage directory.

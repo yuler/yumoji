@@ -1,34 +1,56 @@
 import SwiftUI
 import UIKit
 
-/// One interactive sticker placed on the freeform board: supports drag,
-/// pinch-to-scale, rotate, and tap-to-select with persisted transform state.
+/// Editable world-space transform for a sticker on the 2D board.
+struct DraftStickerTransform: Equatable {
+    var x: Double
+    var y: Double
+    var scale: Double
+    var rotation: Double
+
+    init(x: Double, y: Double, scale: Double, rotation: Double) {
+        self.x = x
+        self.y = y
+        self.scale = scale
+        self.rotation = rotation
+    }
+
+    init(placement: BoardItemPlacement) {
+        self.x = placement.x
+        self.y = placement.y
+        self.scale = placement.scale
+        self.rotation = placement.rotation
+    }
+}
+
+/// Renders one sticker on the 2D zoomable canvas.
+/// Unselected stickers only accept tap-to-select so canvas pan/zoom never fights them;
+/// once selected, single-finger dragging on the sticker moves it in world space.
 @MainActor
 struct BoardStickerItemView: View {
     let record: StickerRecord
-    let boardWidth: CGFloat
+    let transform: DraftStickerTransform
+    let viewport: BoardViewport
+    let viewportSize: CGSize
     let isSelected: Bool
-    let onSelect: () -> Void
-    let onCommitTransform: (_ x: Double, _ y: Double, _ scale: Double, _ rotation: Double) -> Void
-
-    static let baseLongSide: CGFloat = 156
-    static let minScale: Double = 0.45
-    static let maxScale: Double = 2.4
+    let isDragging: Bool
+    let isSnappedUpright: Bool
+    let onTap: () -> Void
+    let onDragChanged: (CGSize) -> Void
+    let onDragEnded: (CGSize) -> Void
 
     @State private var decodedImage: UIImage?
-    @State private var dragDelta: CGSize = .zero
-    @State private var isDragging = false
-    @State private var liveScaleFactor: Double = 1.0
-    @State private var liveRotationDelta: Double = 0.0
 
     var body: some View {
-        let size = baseSize
-        let currentScale = clampedScale(record.scale * liveScaleFactor)
-        let currentRotation = record.rotation + liveRotationDelta
-        let posX = CGFloat(record.x) * boardWidth + dragDelta.width
-        let posY = CGFloat(record.y) + dragDelta.height
+        let baseSize = BoardCanvasMath.baseSize(aspectRatio: record.aspectRatio)
+        let screenPoint = BoardCanvasMath.worldToScreen(
+            CGPoint(x: transform.x, y: transform.y),
+            viewport: viewport,
+            viewportSize: viewportSize
+        )
+        let visualScale = CGFloat(transform.scale) * viewport.zoom * (isDragging ? 1.03 : 1.0)
 
-        Group {
+        let itemCore = Group {
             if let image = decodedImage {
                 Image(uiImage: image)
                     .resizable()
@@ -38,95 +60,56 @@ struct BoardStickerItemView: View {
                     .fill(YumojiTheme.card)
             }
         }
-        .frame(width: size.width, height: size.height)
+        .frame(width: baseSize.width, height: baseSize.height)
         .shadow(
-            color: YumojiTheme.shadow.opacity(isDragging ? 1.25 : 0.9),
+            color: YumojiTheme.shadow.opacity(isDragging ? 1.25 : 0.85),
             radius: isDragging ? 14 : 8,
             y: isDragging ? 9 : 4
         )
         .overlay {
             if isSelected {
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .strokeBorder(
-                        YumojiTheme.accent.opacity(0.85),
-                        style: StrokeStyle(lineWidth: 2, dash: [6, 4])
-                    )
-                    .padding(-6)
+                selectionFrame
             }
         }
-        .scaleEffect(currentScale * (isDragging ? 1.04 : 1.0))
-        .rotationEffect(.radians(currentRotation))
-        .position(x: posX, y: posY)
+        .scaleEffect(visualScale)
+        .rotationEffect(.radians(transform.rotation))
+        .position(screenPoint)
         .contentShape(Rectangle())
         .onTapGesture {
-            onSelect()
+            onTap()
         }
-        .highPriorityGesture(dragGesture)
-        .simultaneousGesture(transformGesture)
         .task(id: record.id) {
-            decodeThumbnail()
+            if decodedImage == nil {
+                decodedImage = StickerThumbnailCache.shared.thumbnail(for: record)
+            }
         }
-    }
 
-    private var baseSize: CGSize {
-        let aspect = max(0.25, min(4.0, record.aspectRatio))
-        if aspect >= 1.0 {
-            return CGSize(width: Self.baseLongSide, height: Self.baseLongSide / aspect)
+        if isSelected {
+            itemCore
+                .highPriorityGesture(
+                    DragGesture(minimumDistance: 2)
+                        .onChanged { value in
+                            onDragChanged(value.translation)
+                        }
+                        .onEnded { value in
+                            onDragEnded(value.translation)
+                        }
+                )
         } else {
-            return CGSize(width: Self.baseLongSide * aspect, height: Self.baseLongSide)
+            itemCore
         }
     }
 
-    private var dragGesture: some Gesture {
-        DragGesture(minimumDistance: 3)
-            .onChanged { value in
-                if !isDragging {
-                    isDragging = true
-                    onSelect()
-                }
-                dragDelta = value.translation
-            }
-            .onEnded { value in
-                let safeWidth = max(boardWidth, 1)
-                let newX = min(0.94, max(0.06, record.x + Double(value.translation.width / safeWidth)))
-                let newY = max(84.0, record.y + Double(value.translation.height))
-                dragDelta = .zero
-                isDragging = false
-                onCommitTransform(newX, newY, record.scale, record.rotation)
-            }
-    }
-
-    private var transformGesture: some Gesture {
-        MagnifyGesture()
-            .simultaneously(with: RotateGesture())
-            .onChanged { value in
-                if let mag = value.first {
-                    liveScaleFactor = Double(mag.magnification)
-                }
-                if let rot = value.second {
-                    liveRotationDelta = rot.rotation.radians
-                }
-            }
-            .onEnded { value in
-                let finalMag = value.first.map { Double($0.magnification) } ?? liveScaleFactor
-                let finalScale = clampedScale(record.scale * finalMag)
-                let finalRotation = record.rotation + (value.second?.rotation.radians ?? liveRotationDelta)
-                liveScaleFactor = 1.0
-                liveRotationDelta = 0.0
-                onCommitTransform(record.x, record.y, finalScale, finalRotation)
-            }
-    }
-
-    private func clampedScale(_ value: Double) -> Double {
-        min(Self.maxScale, max(Self.minScale, value))
-    }
-
-    private func decodeThumbnail() {
-        guard decodedImage == nil else { return }
-        if let thumbData = record.thumbnailData, let img = UIImage(data: thumbData) {
-            decodedImage = img
-        } else if let pngData = record.asset?.pngData, let img = UIImage(data: pngData) {
-            decodedImage = img
+    private var selectionFrame: some View {
+        let strokeColor = isSnappedUpright ? Color.green.opacity(0.85) : YumojiTheme.accent.opacity(0.9)
+        let lineWidth = max(1.5, 2.0 / max(viewport.zoom * CGFloat(transform.scale), 0.35))
+        return ZStack {
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .strokeBorder(
+                    strokeColor,
+                    style: StrokeStyle(lineWidth: lineWidth, dash: [6, 4])
+                )
+                .padding(-6)
         }
     }
 }

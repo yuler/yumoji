@@ -93,6 +93,11 @@ final class StickerRecord {
         return Double(pixelWidth) / Double(pixelHeight)
     }
 
+    /// Preferred timeline date: photo EXIF capture time when available, otherwise creation time.
+    var effectiveDate: Date {
+        capturedAt ?? createdAt
+    }
+
     static func encodeTags(_ tags: [String]) -> String? {
         let cleaned = tags
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }

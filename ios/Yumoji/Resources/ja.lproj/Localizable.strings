@@ -6,11 +6,22 @@
 "home.settings" = "設定";
 "home.version" = "バージョン %@";
 "home.version_accessibility" = "バージョン %@、設定を開く";
+"grid.title" = "ステッカー";
+"grid.open_board" = "ボードを開く";
+"detail.title" = "ステッカー";
+"detail.view_on_board" = "ボードで見る";
 "board.title" = "ステッカーボード";
 "board.count" = "%d 枚";
 "board.action.bring_front" = "最前面へ";
+"board.action.pin" = "Pin";
+"board.action.place" = "配置";
 "board.action.export" = "書き出し / 共有";
+"board.action.export_short" = "共有";
 "board.action.delete" = "削除";
+"board.action.fit_all" = "全体を表示";
+"board.action.reset_zoom" = "倍率をリセット";
+"board.action.add" = "ステッカーを追加";
+"board.empty.hint" = "右下の + から最初のステッカーを追加";
 "board.delete.confirm.title" = "このステッカーを削除しますか？";
 "board.delete.confirm.action" = "削除";
 "board.delete.confirm.cancel" = "キャンセル";
@@ -19,6 +30,7 @@
 /* Result */
 "result.another" = "もう一枚";
 "result.title" = "新しいステッカー";
+"result.save_sticker" = "ステッカーを保存";
 "result.save_to_board" = "ボードに貼る";
 "result.saving" = "保存中…";
 "result.export_share" = "書き出し / 共有";

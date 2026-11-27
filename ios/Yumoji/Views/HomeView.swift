@@ -7,13 +7,11 @@ import UIKit
 struct HomeView: View {
     let appVersion: String
     let stickers: [StickerRecord]
-    @Binding var selectedStickerID: UUID?
-    @Binding var preferredDropY: Double
     /// Asks the parent to present the camera; it outlives this screen.
     let onOpenCamera: () -> Void
     let onPhoto: (PhotoInput) -> Void
     let onOpenSettings: () -> Void
-    let onExportSticker: (UIImage) -> Void
+    let onSelectSticker: (StickerRecord) -> Void
 
     @Environment(LanguageManager.self) private var lang
     @State private var pickerItem: PhotosPickerItem?
@@ -27,14 +25,12 @@ struct HomeView: View {
         if stickers.isEmpty {
             emptyState
         } else {
-            StickerBoardView(
+            StickerGridView(
                 stickers: stickers,
-                selectedStickerID: $selectedStickerID,
-                preferredDropY: $preferredDropY,
                 cameraAvailable: cameraAvailable,
                 onOpenCamera: onOpenCamera,
                 onPhoto: onPhoto,
-                onExportSticker: onExportSticker
+                onSelectSticker: onSelectSticker
             )
         }
     }
