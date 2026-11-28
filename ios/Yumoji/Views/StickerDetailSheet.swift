@@ -10,6 +10,7 @@ struct StickerDetailSheet: View {
     let onDelete: (StickerRecord) -> Void
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(LanguageManager.self) private var lang
 
     @State private var fullImage: UIImage?
@@ -17,18 +18,20 @@ struct StickerDetailSheet: View {
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 18) {
-                previewStage
+            ScrollView {
+                VStack(spacing: 18) {
+                    previewStage
 
-                metadataRow
+                    metadataRow
 
-                actionButtons
-
-                Spacer(minLength: 0)
+                    actionButtons
+                }
+                .frame(maxWidth: 520)
+                .frame(maxWidth: .infinity)
+                .padding(.horizontal, 20)
+                .padding(.top, 12)
+                .padding(.bottom, 24)
             }
-            .padding(.horizontal, 20)
-            .padding(.top, 12)
-            .padding(.bottom, 24)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(YumojiTheme.cream.ignoresSafeArea())
             .navigationTitle(lang.t("detail.title"))
@@ -72,13 +75,19 @@ struct StickerDetailSheet: View {
                     .scaledToFit()
                     .padding(24)
                     .shadow(color: YumojiTheme.shadow.opacity(0.9), radius: 14, y: 6)
+                    .draggable(StickerDragItem(pngData: record.asset?.pngData ?? record.thumbnailData ?? Data())) {
+                        Image(uiImage: image)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 112, height: 112)
+                    }
             } else {
                 ProgressView()
                     .tint(YumojiTheme.inkSoft)
             }
         }
         .frame(maxWidth: .infinity)
-        .frame(height: 300)
+        .frame(height: horizontalSizeClass == .regular ? 340 : 300)
     }
 
     private var metadataRow: some View {

@@ -7,12 +7,13 @@ import UIKit
 @MainActor
 struct StickerStageView: View {
     let session: StickerSession
+    var maxStageHeight: CGFloat = StageLayout.maxHeight
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(LanguageManager.self) private var lang
     @Environment(SoundEffects.self) private var sound
 
-    @State private var containerWidth: CGFloat = max(UIScreen.main.bounds.width - 40, 1)
+    @State private var containerWidth: CGFloat = 320
     @State private var photoPlacedAt: Date?
     @State private var breathing = false
     @State private var phase: CutoutRevealPhase = .scanning
@@ -32,7 +33,11 @@ struct StickerStageView: View {
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 28)
             } else if let photo = session.photoImage {
-                let size = StageLayout.frame(image: pixelSize(of: photo), containerWidth: containerWidth)
+                let size = StageLayout.frame(
+                    image: pixelSize(of: photo),
+                    containerWidth: containerWidth,
+                    maxHeight: maxStageHeight
+                )
                 CutoutRevealView(
                     photo: photo,
                     sticker: session.sticker,

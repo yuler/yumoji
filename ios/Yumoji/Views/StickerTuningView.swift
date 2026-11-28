@@ -6,7 +6,12 @@ import UIKit
 struct StickerTuningView: View {
     @Bindable var session: StickerSession
     @Environment(LanguageManager.self) private var lang
-    @State private var isExpanded = false
+    @State private var isExpanded: Bool
+
+    init(session: StickerSession, initiallyExpanded: Bool = false) {
+        self.session = session
+        _isExpanded = State(initialValue: initiallyExpanded)
+    }
 
     var body: some View {
         DisclosureGroup(isExpanded: $isExpanded) {

@@ -17,9 +17,11 @@ struct StickerGridView: View {
     let onSelectSticker: (StickerRecord) -> Void
     let onLoadMore: () -> Void
 
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(LanguageManager.self) private var lang
 
     @State private var columnCount: Int = StickerGridLayout.loadSavedColumns()
+    @State private var didSyncProfile = false
     @State private var pickerItem: PhotosPickerItem?
     @State private var pinchAnchorScale: CGFloat = 1.0
     @State private var liveRubberBand: CGFloat = 1.0
@@ -28,8 +30,12 @@ struct StickerGridView: View {
     @State private var hideIndicatorTask: Task<Void, Never>?
     @State private var lastTopOffset: CGFloat?
 
+    private var layoutProfile: GridLayoutProfile {
+        horizontalSizeClass == .regular ? .regular : .compact
+    }
+
     private var granularity: StickerTimelineGranularity {
-        StickerTimelineGranularity.forColumns(columnCount)
+        StickerTimelineGranularity.forColumns(columnCount, profile: layoutProfile)
     }
 
     private var sections: [StickerTimelineSection<StickerRecord>] {
@@ -57,11 +63,12 @@ struct StickerGridView: View {
                             MasonrySectionGrid(
                                 stickers: section.items,
                                 columnCount: columnCount,
+                                profile: layoutProfile,
                                 metrics: metrics,
                                 showCardFrame: showCardFrame,
                                 onTap: onSelectSticker
                             )
-                            .padding(.horizontal, 14)
+                            .padding(.horizontal, horizontalSizeClass == .regular ? 22 : 14)
                         } header: {
                             sectionHeader(section)
                         }
@@ -104,17 +111,53 @@ struct StickerGridView: View {
             }
 
             bottomDock
+                .frame(maxWidth: horizontalSizeClass == .regular ? 420 : .infinity)
                 .padding(.horizontal, 18)
                 .padding(.bottom, 12)
         }
         .background(YumojiTheme.cream.ignoresSafeArea())
+        .yumojiImageDropTarget { data in
+            onPhoto(.dropped(data))
+        }
+        .toolbar {
+            if horizontalSizeClass == .regular {
+                ToolbarItemGroup(placement: .topBarLeading) {
+                    Button {
+                        adjustColumns(by: -1)
+                    } label: {
+                        Image(systemName: "plus.magnifyingglass")
+                    }
+                    .disabled(columnCount <= layoutProfile.minColumns)
+                    .accessibilityLabel(lang.t("grid.density.decrease"))
+                    .foregroundStyle(columnCount <= layoutProfile.minColumns ? YumojiTheme.inkSoft.opacity(0.4) : YumojiTheme.ink)
+
+                    Button {
+                        adjustColumns(by: 1)
+                    } label: {
+                        Image(systemName: "minus.magnifyingglass")
+                    }
+                    .disabled(columnCount >= layoutProfile.maxColumns)
+                    .accessibilityLabel(lang.t("grid.density.increase"))
+                    .foregroundStyle(columnCount >= layoutProfile.maxColumns ? YumojiTheme.inkSoft.opacity(0.4) : YumojiTheme.ink)
+                }
+            }
+        }
+        .onAppear {
+            if !didSyncProfile {
+                didSyncProfile = true
+                columnCount = StickerGridLayout.loadSavedColumns(for: layoutProfile)
+            }
+        }
+        .onChange(of: horizontalSizeClass) { _, _ in
+            columnCount = StickerGridLayout.loadSavedColumns(for: layoutProfile)
+        }
         .onChange(of: pickerItem) { _, newItem in
             guard let newItem else { return }
             pickerItem = nil
             onPhoto(.library(newItem))
         }
         .onChange(of: columnCount) { _, newValue in
-            StickerGridLayout.saveColumns(newValue)
+            StickerGridLayout.saveColumns(newValue, for: layoutProfile)
         }
         .onDisappear {
             hideIndicatorTask?.cancel()
@@ -168,7 +211,8 @@ struct StickerGridView: View {
                 let relative = value.magnification / max(pinchAnchorScale, 0.01)
                 if let next = StickerGridLayout.steppedColumns(
                     current: columnCount,
-                    relativeMagnification: relative
+                    relativeMagnification: relative,
+                    profile: layoutProfile
                 ) {
                     pinchAnchorScale = value.magnification
                     liveRubberBand = 1.0
@@ -188,6 +232,15 @@ struct StickerGridView: View {
                     liveRubberBand = 1.0
                 }
             }
+    }
+
+    private func adjustColumns(by delta: Int) {
+        let next = StickerGridLayout.clampColumns(columnCount + delta, profile: layoutProfile)
+        guard next != columnCount else { return }
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.84)) {
+            columnCount = next
+        }
     }
 
     private var bottomDock: some View {
@@ -280,6 +333,7 @@ struct StickerGridView: View {
 private struct MasonrySectionGrid: View {
     let stickers: [StickerRecord]
     let columnCount: Int
+    let profile: GridLayoutProfile
     let metrics: GridCardMetrics
     let showCardFrame: Bool
     let onTap: (StickerRecord) -> Void
@@ -288,6 +342,7 @@ private struct MasonrySectionGrid: View {
         let columns = StickerGridLayout.distributeMasonry(
             items: stickers,
             columnCount: columnCount,
+            profile: profile,
             aspectRatio: \.aspectRatio
         )
 
@@ -357,6 +412,14 @@ private struct StickerGridCardView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .draggable(StickerDragItem(pngData: record.asset?.pngData ?? record.thumbnailData ?? Data())) {
+            if let image = thumbnail {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 96, height: 96)
+            }
+        }
         .task(id: record.id) {
             if thumbnail == nil {
                 thumbnail = StickerThumbnailCache.shared.thumbnail(for: record)

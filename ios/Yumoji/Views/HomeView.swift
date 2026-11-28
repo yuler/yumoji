@@ -85,6 +85,7 @@ struct HomeView: View {
                         .multilineTextAlignment(.center)
                 }
             }
+            .frame(maxWidth: 360)
             .padding(.bottom, 12)
 
             Button(action: onOpenSettings) {
@@ -102,6 +103,9 @@ struct HomeView: View {
         .padding(.horizontal, 28)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(YumojiTheme.cream.ignoresSafeArea())
+        .yumojiImageDropTarget { data in
+            onPhoto(.dropped(data))
+        }
         .onChange(of: pickerItem) { _, newItem in
             guard let newItem else { return }
             pickerItem = nil

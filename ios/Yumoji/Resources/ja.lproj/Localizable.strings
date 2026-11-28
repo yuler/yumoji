@@ -12,6 +12,9 @@
 "grid.frame.hide" = "背景枠を隠す";
 "grid.loading_more" = "読み込み中…";
 "grid.all_loaded" = "全 %d 枚を読み込み済み";
+"grid.density.decrease" = "ステッカーを大きく";
+"grid.density.increase" = "ステッカーを小さく";
+"drop.hint" = "写真をドロップしてステッカーを作成";
 "detail.title" = "ステッカー";
 "detail.view_on_board" = "ボードで見る";
 "board.title" = "ステッカーボード";
@@ -23,6 +26,9 @@
 "board.action.delete" = "削除";
 "board.action.fit_all" = "全体を表示";
 "board.action.reset_zoom" = "倍率をリセット";
+"board.action.zoom_in" = "拡大";
+"board.action.zoom_out" = "縮小";
+"board.action.transform_handle" = "ステッカーの拡大・回転";
 "board.action.add" = "ステッカーを追加";
 "board.empty.hint" = "右下の + から最初のステッカーを追加";
 "board.delete.confirm.title" = "このステッカーを削除しますか？";

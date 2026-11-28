@@ -110,4 +110,32 @@ final class StickerGridLayoutTests: XCTestCase {
         StickerGridLayout.saveShowCardFrame(false, to: defaults)
         XCTAssertFalse(StickerGridLayout.loadShowCardFrame(from: defaults))
     }
+
+    func testRegularProfileSupportsWiderColumnRangeAndIndependentPersistence() {
+        let suiteName = "YumojiGridRegularTests-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        XCTAssertEqual(StickerGridLayout.loadSavedColumns(for: .regular, from: defaults), 5)
+        XCTAssertEqual(StickerTimelineGranularity.forColumns(4, profile: .regular), .day)
+        XCTAssertEqual(StickerTimelineGranularity.forColumns(5, profile: .regular), .month)
+
+        XCTAssertEqual(StickerGridLayout.steppedColumns(current: 5, relativeMagnification: 1.3, profile: .regular), 4)
+        XCTAssertNil(StickerGridLayout.steppedColumns(current: 3, relativeMagnification: 1.5, profile: .regular))
+        XCTAssertEqual(StickerGridLayout.steppedColumns(current: 7, relativeMagnification: 0.75, profile: .regular), 8)
+        XCTAssertNil(StickerGridLayout.steppedColumns(current: 8, relativeMagnification: 0.6, profile: .regular))
+
+        StickerGridLayout.saveColumns(7, for: .regular, to: defaults)
+        StickerGridLayout.saveColumns(2, for: .compact, to: defaults)
+        XCTAssertEqual(StickerGridLayout.loadSavedColumns(for: .regular, from: defaults), 7)
+        XCTAssertEqual(StickerGridLayout.loadSavedColumns(for: .compact, from: defaults), 2)
+
+        let columns = StickerGridLayout.distributeMasonry(
+            items: (0..<10).map { StubItem(id: "\($0)", date: .now, aspect: 1.0) },
+            columnCount: 6,
+            profile: .regular,
+            aspectRatio: \.aspect
+        )
+        XCTAssertEqual(columns.count, 6)
+    }
 }

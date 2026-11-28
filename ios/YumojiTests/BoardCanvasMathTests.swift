@@ -76,4 +76,47 @@ final class BoardCanvasMathTests: XCTestCase {
         XCTAssertEqual(migrated.x, 0, accuracy: 0.001)
         XCTAssertEqual(migrated.y, 0, accuracy: 0.001)
     }
+
+    func testSteppedCanvasZoomStepsAndClampsWithinBounds() {
+        let zoomedIn = BoardCanvasMath.steppedCanvasZoom(from: 1.0, direction: .zoomIn)
+        XCTAssertEqual(zoomedIn, 1.25, accuracy: 0.001)
+
+        let zoomedOut = BoardCanvasMath.steppedCanvasZoom(from: 1.0, direction: .zoomOut)
+        XCTAssertEqual(zoomedOut, 0.8, accuracy: 0.001)
+
+        let maxClamped = BoardCanvasMath.steppedCanvasZoom(from: BoardCanvasMath.maxCanvasZoom, direction: .zoomIn)
+        XCTAssertEqual(maxClamped, BoardCanvasMath.maxCanvasZoom, accuracy: 0.001)
+
+        let minClamped = BoardCanvasMath.steppedCanvasZoom(from: BoardCanvasMath.minCanvasZoom, direction: .zoomOut)
+        XCTAssertEqual(minClamped, BoardCanvasMath.minCanvasZoom, accuracy: 0.001)
+    }
+
+    func testHandleTransformScalesRotatesAndSnapsUpright() {
+        let center = CGPoint(x: 200, y: 200)
+        let start = CGPoint(x: 250, y: 200) // radius 50, angle 0
+
+        // Double radius and rotate 90 degrees clockwise
+        let rotated = BoardCanvasMath.handleTransform(
+            center: center,
+            startPoint: start,
+            currentPoint: CGPoint(x: 200, y: 300), // radius 100, angle pi/2
+            baseScale: 1.0,
+            baseRotation: 0.0
+        )
+        XCTAssertEqual(rotated.scale, 2.0, accuracy: 0.001)
+        XCTAssertEqual(rotated.rotation, Double.pi / 2, accuracy: 0.001)
+        XCTAssertFalse(rotated.snappedUpright)
+
+        // Small rotation within snap threshold snaps back to upright
+        let tinyAngle = 2.0 * Double.pi / 180.0
+        let snapped = BoardCanvasMath.handleTransform(
+            center: center,
+            startPoint: start,
+            currentPoint: CGPoint(x: 200 + 50 * cos(tinyAngle), y: 200 + 50 * sin(tinyAngle)),
+            baseScale: 1.0,
+            baseRotation: 0.0
+        )
+        XCTAssertTrue(snapped.snappedUpright)
+        XCTAssertEqual(snapped.rotation, 0.0, accuracy: 0.0001)
+    }
 }

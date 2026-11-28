@@ -12,6 +12,9 @@
 "grid.frame.hide" = "Hide Card Frame";
 "grid.loading_more" = "Loading more…";
 "grid.all_loaded" = "All %d stickers loaded";
+"grid.density.decrease" = "Larger Stickers";
+"grid.density.increase" = "Smaller Stickers";
+"drop.hint" = "Drop photo to make a sticker";
 "detail.title" = "Sticker";
 "detail.view_on_board" = "View on Board";
 "board.title" = "Sticker Board";
@@ -23,6 +26,9 @@
 "board.action.delete" = "Delete";
 "board.action.fit_all" = "Fit All";
 "board.action.reset_zoom" = "Reset Zoom";
+"board.action.zoom_in" = "Zoom In";
+"board.action.zoom_out" = "Zoom Out";
+"board.action.transform_handle" = "Resize and Rotate Sticker";
 "board.action.add" = "Add Sticker";
 "board.empty.hint" = "Tap + to add your first sticker";
 "board.delete.confirm.title" = "Delete this sticker?";
