@@ -12,6 +12,9 @@
 "grid.frame.hide" = "隐藏背景框";
 "grid.loading_more" = "正在加载更多…";
 "grid.all_loaded" = "已加载全部 %d 枚";
+"grid.density.decrease" = "增大贴纸";
+"grid.density.increase" = "缩小贴纸";
+"drop.hint" = "松开图片，做成贴纸";
 "detail.title" = "贴纸详情";
 "detail.view_on_board" = "在画板中查看";
 "board.title" = "画板";
@@ -23,6 +26,9 @@
 "board.action.delete" = "删除";
 "board.action.fit_all" = "整体居中";
 "board.action.reset_zoom" = "重置缩放";
+"board.action.zoom_in" = "放大画布";
+"board.action.zoom_out" = "缩小画布";
+"board.action.transform_handle" = "缩放和旋转贴纸";
 "board.action.add" = "添加贴纸";
 "board.empty.hint" = "点击右下角 + 添加你的第一枚贴纸";
 "board.delete.confirm.title" = "删除这枚贴纸？";

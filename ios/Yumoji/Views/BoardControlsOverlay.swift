@@ -65,9 +65,12 @@ struct BoardUnselectedControls: View {
     let cameraAvailable: Bool
     let onFitAll: () -> Void
     let onResetZoom: () -> Void
+    var onZoomIn: () -> Void = {}
+    var onZoomOut: () -> Void = {}
     let onOpenCamera: () -> Void
     let onOpenPhotosPicker: () -> Void
 
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(LanguageManager.self) private var lang
 
     var body: some View {
@@ -82,9 +85,21 @@ struct BoardUnselectedControls: View {
                 }
                 .accessibilityLabel(lang.t("board.action.fit_all"))
 
-                Rectangle()
-                    .fill(YumojiTheme.ink.opacity(0.12))
-                    .frame(width: 1, height: 18)
+                divider
+
+                if horizontalSizeClass == .regular {
+                    Button(action: onZoomOut) {
+                        Image(systemName: "minus")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(zoom <= BoardCanvasMath.minCanvasZoom + 0.01 ? YumojiTheme.inkSoft.opacity(0.4) : YumojiTheme.ink)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 10)
+                    }
+                    .disabled(zoom <= BoardCanvasMath.minCanvasZoom + 0.01)
+                    .accessibilityLabel(lang.t("board.action.zoom_out"))
+
+                    divider
+                }
 
                 Button(action: onResetZoom) {
                     Text("\(Int(round(zoom * 100)))%")
@@ -95,6 +110,20 @@ struct BoardUnselectedControls: View {
                         .padding(.vertical, 10)
                 }
                 .accessibilityLabel(lang.t("board.action.reset_zoom"))
+
+                if horizontalSizeClass == .regular {
+                    divider
+
+                    Button(action: onZoomIn) {
+                        Image(systemName: "plus")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(zoom >= BoardCanvasMath.maxCanvasZoom - 0.01 ? YumojiTheme.inkSoft.opacity(0.4) : YumojiTheme.ink)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 10)
+                    }
+                    .disabled(zoom >= BoardCanvasMath.maxCanvasZoom - 0.01)
+                    .accessibilityLabel(lang.t("board.action.zoom_in"))
+                }
             }
             .background(YumojiTheme.card.opacity(0.95), in: Capsule())
             .overlay(
@@ -123,6 +152,54 @@ struct BoardUnselectedControls: View {
             }
             .accessibilityLabel(lang.t("board.action.add"))
         }
+    }
+
+    private var divider: some View {
+        Rectangle()
+            .fill(YumojiTheme.ink.opacity(0.12))
+            .frame(width: 1, height: 18)
+    }
+}
+
+/// Invisible hardware-keyboard shortcuts for iPad board navigation and sticker actions.
+@MainActor
+struct BoardKeyboardShortcutsView: View {
+    let hasSelection: Bool
+    let onEscape: () -> Void
+    let onDeleteSelected: () -> Void
+    let onFitAll: () -> Void
+    let onResetZoom: () -> Void
+    let onZoomIn: () -> Void
+    let onZoomOut: () -> Void
+
+    var body: some View {
+        Group {
+            Button("", action: onEscape)
+                .keyboardShortcut(.escape, modifiers: [])
+
+            if hasSelection {
+                Button("", action: onDeleteSelected)
+                    .keyboardShortcut(.delete, modifiers: [])
+            }
+
+            Button("", action: onFitAll)
+                .keyboardShortcut("0", modifiers: .command)
+
+            Button("", action: onResetZoom)
+                .keyboardShortcut("1", modifiers: .command)
+
+            Button("", action: onZoomIn)
+                .keyboardShortcut("=", modifiers: .command)
+
+            Button("", action: onZoomIn)
+                .keyboardShortcut("+", modifiers: .command)
+
+            Button("", action: onZoomOut)
+                .keyboardShortcut("-", modifiers: .command)
+        }
+        .opacity(0)
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
     }
 }
 

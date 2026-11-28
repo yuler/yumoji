@@ -18,41 +18,41 @@ struct StickerBoardView: View {
     let onViewportCenterChanged: (CGPoint) -> Void
     var onStickersMutated: () -> Void = {}
 
-    @Environment(\.modelContext) private var modelContext
+    @Environment(\.modelContext) var modelContext
     @Environment(LanguageManager.self) private var lang
 
-    @Query(sort: \StickerRecord.createdAt, order: .reverse) private var stickers: [StickerRecord]
-    @Query private var allPlacements: [BoardItemPlacement]
+    @Query(sort: \StickerRecord.createdAt, order: .reverse) var stickers: [StickerRecord]
+    @Query var allPlacements: [BoardItemPlacement]
 
-    @State private var viewport: BoardViewport = .identity
-    @State private var canvasSize: CGSize = .zero
-    @State private var didInitializeViewport = false
+    @State var viewport: BoardViewport = .identity
+    @State var canvasSize: CGSize = .zero
+    @State var didInitializeViewport = false
 
     @State private var panStartOffset: CGSize?
     @State private var zoomBaseViewport: BoardViewport?
 
-    @State private var draftStickerID: UUID?
-    @State private var draftTransform: DraftStickerTransform?
-    @State private var dragStartWorld: CGPoint?
-    @State private var isDraggingSticker = false
-    @State private var isTwoFingerTransforming = false
-    @State private var pinchBaseScale: Double?
-    @State private var rotateBaseRadians: Double?
-    @State private var isSnappedUpright = false
+    @State var draftStickerID: UUID?
+    @State var draftTransform: DraftStickerTransform?
+    @State var dragStartWorld: CGPoint?
+    @State var isDraggingSticker = false
+    @State var isTwoFingerTransforming = false
+    @State var pinchBaseScale: Double?
+    @State var rotateBaseRadians: Double?
+    @State var isSnappedUpright = false
 
     @State private var pendingDelete: StickerRecord?
     @State private var showPhotosPicker = false
     @State private var pickerItem: PhotosPickerItem?
 
-    private var placements: [BoardItemPlacement] {
+    var placements: [BoardItemPlacement] {
         allPlacements.filter { $0.boardID == StickerRecord.defaultBoardID }
     }
 
-    private var placementByStickerID: [UUID: BoardItemPlacement] {
+    var placementByStickerID: [UUID: BoardItemPlacement] {
         Dictionary(uniqueKeysWithValues: placements.map { ($0.stickerID, $0) })
     }
 
-    private var orderedItems: [(StickerRecord, BoardItemPlacement)] {
+    var orderedItems: [(StickerRecord, BoardItemPlacement)] {
         let lookup = placementByStickerID
         return stickers
             .compactMap { record in
@@ -114,6 +114,17 @@ struct StickerBoardView: View {
                                 },
                                 onDragEnded: { translation in
                                     handleStickerDragEnded(translation: translation, fallback: placement)
+                                },
+                                onHandleTransformChanged: { center, startPoint, currentPoint in
+                                    handleCornerTransformChanged(
+                                        center: center,
+                                        startPoint: startPoint,
+                                        currentPoint: currentPoint,
+                                        fallback: placement
+                                    )
+                                },
+                                onHandleTransformEnded: {
+                                    handleCornerTransformEnded()
                                 }
                             )
                             .zIndex(Double(placement.zIndex) + (isSelected ? 0.5 : 0))
@@ -146,6 +157,8 @@ struct StickerBoardView: View {
                             cameraAvailable: cameraAvailable,
                             onFitAll: { fitAllStickers(in: size, animated: true) },
                             onResetZoom: { resetZoomTo100(in: size) },
+                            onZoomIn: { stepCanvasZoom(.zoomIn, in: size) },
+                            onZoomOut: { stepCanvasZoom(.zoomOut, in: size) },
                             onOpenCamera: onOpenCamera,
                             onOpenPhotosPicker: { showPhotosPicker = true }
                         )
@@ -170,7 +183,34 @@ struct StickerBoardView: View {
             }
         }
         .background(YumojiTheme.cream.ignoresSafeArea())
+        .background {
+            BoardKeyboardShortcutsView(
+                hasSelection: selectedRecord != nil,
+                onEscape: { commitDraftAndDeselect() },
+                onDeleteSelected: {
+                    if let active = selectedRecord {
+                        pendingDelete = active
+                    }
+                },
+                onFitAll: { fitAllStickers(in: canvasSize, animated: true) },
+                onResetZoom: { resetZoomTo100(in: canvasSize) },
+                onZoomIn: { stepCanvasZoom(.zoomIn, in: canvasSize) },
+                onZoomOut: { stepCanvasZoom(.zoomOut, in: canvasSize) }
+            )
+        }
+        .yumojiImageDropTarget { data in
+            onPhoto(.dropped(data))
+        }
         .photosPicker(isPresented: $showPhotosPicker, selection: $pickerItem, matching: .images)
+        .onChange(of: initialFocusStickerID) { _, newFocusID in
+            guard let focusID = newFocusID,
+                  let placement = placementByStickerID[focusID]
+            else { return }
+            applyViewport(BoardCanvasMath.focus(on: CGPoint(x: placement.x, y: placement.y), zoom: 1.0), animated: true)
+            selectedStickerID = focusID
+            draftStickerID = focusID
+            draftTransform = DraftStickerTransform(placement: placement)
+        }
         .onChange(of: pickerItem) { _, newItem in
             guard let newItem else { return }
             pickerItem = nil
@@ -327,179 +367,59 @@ struct StickerBoardView: View {
         draftTransform = draft
     }
 
-    // Floating bars, BoardEmptyHint & InfiniteDotGridCanvas live in Views/BoardControlsOverlay.swift.
-
-    // MARK: - Selection & Persistence
-
-    private func selectSticker(_ record: StickerRecord) {
-        if selectedStickerID == record.id {
-            return
+    private func handleCornerTransformChanged(
+        center: CGPoint,
+        startPoint: CGPoint,
+        currentPoint: CGPoint,
+        fallback: BoardItemPlacement
+    ) {
+        if draftTransform == nil || draftStickerID != fallback.stickerID {
+            draftStickerID = fallback.stickerID
+            draftTransform = DraftStickerTransform(placement: fallback)
         }
-        commitDraftIfNeeded()
-        resetTransientGestureState()
-        selectedStickerID = record.id
-        if let placement = placementByStickerID[record.id] {
-            draftStickerID = record.id
-            draftTransform = DraftStickerTransform(placement: placement)
-        } else {
-            draftStickerID = nil
-            draftTransform = nil
+        guard var draft = draftTransform else { return }
+        if pinchBaseScale == nil {
+            pinchBaseScale = draft.scale
         }
-        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        if rotateBaseRadians == nil {
+            rotateBaseRadians = draft.rotation
+        }
+        let result = BoardCanvasMath.handleTransform(
+            center: center,
+            startPoint: startPoint,
+            currentPoint: currentPoint,
+            baseScale: pinchBaseScale ?? draft.scale,
+            baseRotation: rotateBaseRadians ?? draft.rotation
+        )
+        if result.snappedUpright && !isSnappedUpright {
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        }
+        isSnappedUpright = result.snappedUpright
+        draft.scale = result.scale
+        draft.rotation = result.rotation
+        draftTransform = draft
     }
 
-    private func syncDraftForCurrentSelection() {
-        guard let selectedStickerID,
-              let placement = placementByStickerID[selectedStickerID]
-        else {
-            draftStickerID = nil
-            draftTransform = nil
-            return
-        }
-        if draftTransform == nil || draftStickerID != selectedStickerID {
-            draftStickerID = selectedStickerID
-            draftTransform = DraftStickerTransform(placement: placement)
-        }
-    }
-
-    private func commitDraftIfNeeded() {
-        guard let selectedID = selectedStickerID,
-              draftStickerID == selectedID,
-              let draft = draftTransform,
-              let placement = placementByStickerID[selectedID]
-        else { return }
-        placement.x = draft.x
-        placement.y = draft.y
-        placement.scale = draft.scale
-        placement.rotation = draft.rotation
-        placement.updatedAt = Date()
-        try? modelContext.save()
-    }
-
-    private func commitDraftAndDeselect(haptic: Bool = false) {
-        guard selectedStickerID != nil else { return }
-        commitDraftIfNeeded()
-        selectedStickerID = nil
-        draftStickerID = nil
-        draftTransform = nil
-        resetTransientGestureState()
-        if haptic {
-            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-        }
-    }
-
-    private func resetTransientGestureState() {
-        dragStartWorld = nil
-        isDraggingSticker = false
-        isTwoFingerTransforming = false
+    private func handleCornerTransformEnded() {
         pinchBaseScale = nil
         rotateBaseRadians = nil
         isSnappedUpright = false
     }
 
-    private func pinToFront(_ record: StickerRecord) {
-        guard let placement = placementByStickerID[record.id] else { return }
-        let maxOtherZ = placements
-            .filter { $0.stickerID != record.id }
-            .map(\.zIndex)
-            .max()
-        if let maxOtherZ, placement.zIndex <= maxOtherZ {
-            let nextZ = maxOtherZ + 1
-            placement.zIndex = nextZ
-            record.zIndex = nextZ
-            placement.updatedAt = Date()
-            try? modelContext.save()
-        }
-        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+    private func stepCanvasZoom(_ direction: BoardZoomDirection, in size: CGSize) {
+        guard size.width > 1, size.height > 1 else { return }
+        let targetZoom = BoardCanvasMath.steppedCanvasZoom(from: viewport.zoom, direction: direction)
+        let magnification = targetZoom / max(viewport.zoom, 0.01)
+        let center = CGPoint(x: size.width / 2, y: size.height / 2)
+        let next = BoardCanvasMath.zoomedViewport(
+            from: viewport,
+            magnification: magnification,
+            anchor: center,
+            viewportSize: size
+        )
+        applyViewport(next, animated: true)
     }
 
-    private func deleteSticker(_ record: StickerRecord) {
-        if selectedStickerID == record.id {
-            selectedStickerID = nil
-            draftStickerID = nil
-            draftTransform = nil
-            resetTransientGestureState()
-        }
-        try? StickerStorage.delete(record, in: modelContext)
-        onStickersMutated()
-    }
-
-    // MARK: - Viewport Helpers
-
-    private func initializeViewportIfNeeded(size: CGSize) {
-        guard !didInitializeViewport, size.width > 1, size.height > 1 else { return }
-        didInitializeViewport = true
-
-        if let focusID = initialFocusStickerID,
-           let placement = placementByStickerID[focusID] {
-            viewport = BoardCanvasMath.focus(
-                on: CGPoint(x: placement.x, y: placement.y),
-                zoom: 1.0
-            )
-            selectedStickerID = focusID
-            draftStickerID = focusID
-            draftTransform = DraftStickerTransform(placement: placement)
-            reportViewportCenter()
-            return
-        }
-
-        if let saved = StickerStorage.loadBoardViewport(in: modelContext) {
-            viewport = saved
-            reportViewportCenter()
-            return
-        }
-
-        fitAllStickers(in: size, animated: false)
-    }
-
-    private func fitAllStickers(in size: CGSize, animated: Bool) {
-        let geometries = orderedItems.map { record, placement in
-            BoardItemGeometry(
-                x: placement.x,
-                y: placement.y,
-                scale: placement.scale,
-                aspectRatio: record.aspectRatio
-            )
-        }
-        let target = BoardCanvasMath.fitAll(items: geometries, viewportSize: size)
-        applyViewport(target, animated: animated)
-    }
-
-    private func resetZoomTo100(in size: CGSize) {
-        let geometries = orderedItems.map { record, placement in
-            BoardItemGeometry(
-                x: placement.x,
-                y: placement.y,
-                scale: placement.scale,
-                aspectRatio: record.aspectRatio
-            )
-        }
-        let fit = BoardCanvasMath.fitAll(items: geometries, viewportSize: size)
-        let contentCenter = BoardCanvasMath.visibleWorldCenter(viewport: fit)
-        applyViewport(BoardCanvasMath.focus(on: contentCenter, zoom: 1.0), animated: true)
-    }
-
-    private func toggleFitOrReset(in size: CGSize) {
-        if abs(viewport.zoom - 1.0) < 0.08 {
-            fitAllStickers(in: size, animated: true)
-        } else {
-            resetZoomTo100(in: size)
-        }
-    }
-
-    private func applyViewport(_ target: BoardViewport, animated: Bool) {
-        if animated {
-            withAnimation(.spring(response: 0.34, dampingFraction: 0.86)) {
-                viewport = target
-            }
-        } else {
-            viewport = target
-        }
-        reportViewportCenter()
-        StickerStorage.saveBoardViewport(target, in: modelContext)
-    }
-
-    private func reportViewportCenter() {
-        onViewportCenterChanged(BoardCanvasMath.visibleWorldCenter(viewport: viewport))
-    }
+    // Floating bars, keyboard shortcuts & InfiniteDotGridCanvas live in Views/BoardControlsOverlay.swift.
+    // Selection, persistence & viewport helpers live in Views/StickerBoardView+Viewport.swift.
 }

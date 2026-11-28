@@ -12,10 +12,16 @@ private enum CaptureOrigin {
     case board
 }
 
+private enum RegularWorkspace: Hashable {
+    case grid
+    case board
+}
+
 @MainActor
 struct ContentView: View {
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.modelContext) private var modelContext
     @Environment(ThemeManager.self) private var themeManager
     @Environment(LanguageManager.self) private var lang
@@ -24,6 +30,8 @@ struct ContentView: View {
     @State private var showCardFrame = StickerGridLayout.loadShowCardFrame()
     @State private var session = StickerSession()
     @State private var navPath: [AppRoute] = []
+    @State private var regularWorkspace: RegularWorkspace = .grid
+    @State private var regularBoardFocusStickerID: UUID?
     @State private var captureOrigin: CaptureOrigin = .grid
     @State private var boardCenterAnchor: CGPoint = .zero
     @State private var selectedBoardStickerID: UUID?
@@ -41,39 +49,59 @@ struct ContentView: View {
         pager.totalCount > 0 || !pager.items.isEmpty
     }
 
+    private var isRegularWidth: Bool {
+        horizontalSizeClass == .regular
+    }
+
+    private var showingRegularBoard: Bool {
+        isRegularWidth && hasStickers && regularWorkspace == .board
+    }
+
     var body: some View {
         ZStack {
             YumojiTheme.cream.ignoresSafeArea()
 
             NavigationStack(path: $navPath) {
-                HomeView(
-                    appVersion: AppUpdate.marketingVersion(),
-                    stickers: pager.items,
-                    totalCount: pager.totalCount,
-                    hasMore: pager.hasMore,
-                    isLoadingMore: pager.isLoading,
-                    showCardFrame: showCardFrame,
-                    onOpenCamera: {
-                        captureOrigin = .grid
-                        showCamera = true
-                    },
-                    onPhoto: { input in
-                        startCapture(input, origin: .grid)
-                    },
-                    onOpenSettings: {
-                        showSettings = true
-                    },
-                    onSelectSticker: { record in
-                        inspectedSticker = record
-                    },
-                    onLoadMore: {
-                        pager.loadNextPage(in: modelContext)
+                Group {
+                    if showingRegularBoard {
+                        boardView(focusStickerID: regularBoardFocusStickerID)
+                    } else {
+                        HomeView(
+                            appVersion: AppUpdate.marketingVersion(),
+                            stickers: pager.items,
+                            totalCount: pager.totalCount,
+                            hasMore: pager.hasMore,
+                            isLoadingMore: pager.isLoading,
+                            showCardFrame: showCardFrame,
+                            onOpenCamera: {
+                                captureOrigin = .grid
+                                showCamera = true
+                            },
+                            onPhoto: { input in
+                                startCapture(input, origin: .grid)
+                            },
+                            onOpenSettings: {
+                                showSettings = true
+                            },
+                            onSelectSticker: { record in
+                                inspectedSticker = record
+                            },
+                            onLoadMore: {
+                                pager.loadNextPage(in: modelContext)
+                            }
+                        )
                     }
-                )
-                .navigationTitle(hasStickers ? lang.t("grid.title") : "")
+                }
+                .navigationTitle((hasStickers && !isRegularWidth) ? lang.t("grid.title") : "")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
-                    if hasStickers {
+                    if hasStickers && isRegularWidth {
+                        ToolbarItem(placement: .principal) {
+                            workspaceSwitcher
+                        }
+                    }
+
+                    if hasStickers && !showingRegularBoard {
                         ToolbarItem(placement: .topBarTrailing) {
                             Button {
                                 withAnimation(.easeInOut(duration: 0.2)) {
@@ -90,7 +118,9 @@ struct ContentView: View {
                             )
                             .foregroundStyle(showCardFrame ? YumojiTheme.accent : YumojiTheme.ink)
                         }
+                    }
 
+                    if hasStickers && !isRegularWidth {
                         ToolbarItem(placement: .topBarTrailing) {
                             Button {
                                 openBoard(focusStickerID: nil)
@@ -107,31 +137,11 @@ struct ContentView: View {
                 .navigationDestination(for: AppRoute.self) { route in
                     switch route {
                     case .board(let focusStickerID):
-                        StickerBoardView(
-                            initialFocusStickerID: focusStickerID,
-                            selectedStickerID: $selectedBoardStickerID,
-                            cameraAvailable: cameraAvailable,
-                            onOpenCamera: {
-                                captureOrigin = .board
-                                showCamera = true
-                            },
-                            onPhoto: { input in
-                                startCapture(input, origin: .board)
-                            },
-                            onExportSticker: { image in
-                                exportPayload = ExportPayload(image: image)
-                            },
-                            onViewportCenterChanged: { center in
-                                boardCenterAnchor = center
-                            },
-                            onStickersMutated: {
-                                pager.reloadPreservingLoadedCount(in: modelContext)
-                            }
-                        )
-                        .navigationTitle(lang.t("board.title"))
-                        .navigationBarTitleDisplayMode(.inline)
-                        .toolbar { settingsButton }
-                        .yumojiNavigationBar()
+                        boardView(focusStickerID: focusStickerID)
+                            .navigationTitle(lang.t("board.title"))
+                            .navigationBarTitleDisplayMode(.inline)
+                            .toolbar { settingsButton }
+                            .yumojiNavigationBar()
 
                     case .result:
                         ResultView(
@@ -171,6 +181,8 @@ struct ContentView: View {
                 onClearedStickers: {
                     selectedBoardStickerID = nil
                     inspectedSticker = nil
+                    regularBoardFocusStickerID = nil
+                    regularWorkspace = .grid
                     navPath.removeAll()
                     pager.reloadPreservingLoadedCount(in: modelContext)
                 }
@@ -221,9 +233,79 @@ struct ContentView: View {
                 session.reset()
             }
         }
+        .onChange(of: horizontalSizeClass) { _, newClass in
+            syncWorkspaceForSizeClass(newClass)
+        }
         .onChange(of: scenePhase) { _, newPhase in
             if newPhase == .active {
                 lang.refreshSystemLanguages()
+            }
+        }
+    }
+
+    private var workspaceSwitcher: some View {
+        Picker("", selection: Binding(
+            get: { regularWorkspace },
+            set: { next in
+                if next == .board {
+                    StickerStorage.ensureAllBoardPlacements(in: modelContext)
+                    regularBoardFocusStickerID = nil
+                }
+                regularWorkspace = next
+            }
+        )) {
+            Text(lang.t("grid.title")).tag(RegularWorkspace.grid)
+            Text(lang.t("board.title")).tag(RegularWorkspace.board)
+        }
+        .pickerStyle(.segmented)
+        .labelsHidden()
+        .frame(width: 220)
+    }
+
+    private func boardView(focusStickerID: UUID?) -> some View {
+        StickerBoardView(
+            initialFocusStickerID: focusStickerID,
+            selectedStickerID: $selectedBoardStickerID,
+            cameraAvailable: cameraAvailable,
+            onOpenCamera: {
+                captureOrigin = .board
+                showCamera = true
+            },
+            onPhoto: { input in
+                startCapture(input, origin: .board)
+            },
+            onExportSticker: { image in
+                exportPayload = ExportPayload(image: image)
+            },
+            onViewportCenterChanged: { center in
+                boardCenterAnchor = center
+            },
+            onStickersMutated: {
+                pager.reloadPreservingLoadedCount(in: modelContext)
+            }
+        )
+    }
+
+    private func syncWorkspaceForSizeClass(_ newClass: UserInterfaceSizeClass?) {
+        if newClass == .regular {
+            if let boardIndex = navPath.firstIndex(where: {
+                if case .board = $0 { return true }
+                return false
+            }) {
+                if case .board(let focusID) = navPath[boardIndex] {
+                    regularBoardFocusStickerID = focusID
+                }
+                navPath.remove(at: boardIndex)
+                regularWorkspace = .board
+            }
+        } else if newClass == .compact, regularWorkspace == .board {
+            regularWorkspace = .grid
+            let alreadyHasBoard = navPath.contains {
+                if case .board = $0 { return true }
+                return false
+            }
+            if !alreadyHasBoard {
+                navPath.insert(.board(focusStickerID: selectedBoardStickerID), at: 0)
             }
         }
     }
@@ -239,7 +321,12 @@ struct ContentView: View {
     private func openBoard(focusStickerID: UUID?) {
         StickerStorage.ensureAllBoardPlacements(in: modelContext)
         selectedBoardStickerID = focusStickerID
-        navPath.append(.board(focusStickerID: focusStickerID))
+        if isRegularWidth {
+            regularBoardFocusStickerID = focusStickerID
+            regularWorkspace = .board
+        } else {
+            navPath.append(.board(focusStickerID: focusStickerID))
+        }
     }
 
     private func saveSticker(_ sticker: UIImage, capturedAt: Date?) {

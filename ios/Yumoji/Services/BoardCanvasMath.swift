@@ -29,6 +29,17 @@ struct RotationSnapResult: Equatable, Sendable {
     let snapped: Bool
 }
 
+struct HandleTransformResult: Equatable, Sendable {
+    let scale: Double
+    let rotation: Double
+    let snappedUpright: Bool
+}
+
+enum BoardZoomDirection: Sendable {
+    case zoomIn
+    case zoomOut
+}
+
 /// Pure geometry and transform utilities for the 2D zoomable sticker board.
 enum BoardCanvasMath {
     static let baseStickerLongSide: CGFloat = 156
@@ -37,9 +48,50 @@ enum BoardCanvasMath {
     static let minStickerScale: Double = 0.35
     static let maxStickerScale: Double = 3.0
     static let defaultSnapThresholdDegrees: Double = 4.0
+    static let zoomStepFactor: CGFloat = 1.25
 
     static func clampCanvasZoom(_ zoom: CGFloat) -> CGFloat {
         min(maxCanvasZoom, max(minCanvasZoom, zoom))
+    }
+
+    /// Steps canvas zoom in or out by a predictable factor for toolbar buttons and keyboard shortcuts.
+    static func steppedCanvasZoom(from current: CGFloat, direction: BoardZoomDirection) -> CGFloat {
+        let factor: CGFloat = direction == .zoomIn ? zoomStepFactor : (1.0 / zoomStepFactor)
+        return clampCanvasZoom(current * factor)
+    }
+
+    /// Computes scale and rotation from dragging a single-pointer corner handle around `center`.
+    static func handleTransform(
+        center: CGPoint,
+        startPoint: CGPoint,
+        currentPoint: CGPoint,
+        baseScale: Double,
+        baseRotation: Double,
+        snapThresholdDegrees: Double = defaultSnapThresholdDegrees
+    ) -> HandleTransformResult {
+        let startDX = Double(startPoint.x - center.x)
+        let startDY = Double(startPoint.y - center.y)
+        let currentDX = Double(currentPoint.x - center.x)
+        let currentDY = Double(currentPoint.y - center.y)
+
+        let startDist = hypot(startDX, startDY)
+        let currentDist = hypot(currentDX, currentDY)
+        guard startDist > 4, currentDist > 4 else {
+            return HandleTransformResult(
+                scale: clampStickerScale(baseScale),
+                rotation: baseRotation,
+                snappedUpright: false
+            )
+        }
+
+        let newScale = clampStickerScale(baseScale * (currentDist / startDist))
+        let angleDelta = atan2(currentDY, currentDX) - atan2(startDY, startDX)
+        let snap = snapRotation(baseRotation + angleDelta, thresholdDegrees: snapThresholdDegrees)
+        return HandleTransformResult(
+            scale: newScale,
+            rotation: snap.radians,
+            snappedUpright: snap.snapped
+        )
     }
 
     static func clampStickerScale(_ scale: Double) -> Double {

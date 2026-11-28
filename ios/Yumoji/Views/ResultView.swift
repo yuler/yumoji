@@ -9,10 +9,50 @@ struct ResultView: View {
     let onSaveToBoard: (UIImage, Date?) -> Void
     let onOpenExport: (UIImage) -> Void
 
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(LanguageManager.self) private var lang
     @State private var isSavingToBoard = false
 
     var body: some View {
+        GeometryReader { proxy in
+            let isSideBySide = horizontalSizeClass == .regular && proxy.size.width >= 720
+
+            if isSideBySide {
+                sideBySideLayout(in: proxy.size)
+            } else {
+                stackedLayout
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(YumojiTheme.cream.ignoresSafeArea())
+    }
+
+    private func sideBySideLayout(in size: CGSize) -> some View {
+        let inspectorWidth = min(360, max(300, size.width * 0.34))
+        let stageMaxHeight = max(360, size.height - 64)
+
+        return HStack(alignment: .center, spacing: 24) {
+            StickerStageView(session: session, maxStageHeight: stageMaxHeight)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+            if session.cutout == .ready, let sticker = session.sticker {
+                ScrollView {
+                    VStack(spacing: 18) {
+                        actionBar(for: sticker)
+                        StickerTuningView(session: session, initiallyExpanded: true)
+                    }
+                    .padding(.vertical, 4)
+                }
+                .frame(width: inspectorWidth)
+                .transition(.move(edge: .trailing).combined(with: .opacity))
+            }
+        }
+        .padding(.horizontal, 28)
+        .padding(.vertical, 20)
+        .animation(.easeOut(duration: 0.25), value: session.cutout == .ready)
+    }
+
+    private var stackedLayout: some View {
         ScrollView {
             VStack(spacing: 18) {
                 StickerStageView(session: session)
@@ -22,11 +62,11 @@ struct ResultView: View {
                     StickerTuningView(session: session)
                 }
             }
+            .frame(maxWidth: 640)
+            .frame(maxWidth: .infinity)
             .padding(.horizontal, 20)
             .padding(.bottom, 28)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(YumojiTheme.cream.ignoresSafeArea())
     }
 
     private func actionBar(for sticker: UIImage) -> some View {

@@ -39,7 +39,10 @@ struct BoardStickerItemView: View {
     let onTap: () -> Void
     let onDragChanged: (CGSize) -> Void
     let onDragEnded: (CGSize) -> Void
+    var onHandleTransformChanged: (CGPoint, CGPoint, CGPoint) -> Void = { _, _, _ in }
+    var onHandleTransformEnded: () -> Void = {}
 
+    @Environment(LanguageManager.self) private var lang
     @State private var decodedImage: UIImage?
 
     var body: some View {
@@ -55,43 +58,50 @@ struct BoardStickerItemView: View {
             viewportSize: viewportSize
         )
 
-        Group {
-            if let image = decodedImage {
-                Image(uiImage: image)
-                    .resizable()
-                    .scaledToFit()
-            } else {
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(YumojiTheme.card)
-            }
-        }
-        .frame(width: displaySize.width, height: displaySize.height)
-        .shadow(
-            color: YumojiTheme.shadow.opacity(isDragging ? 1.25 : 0.85),
-            radius: isDragging ? 14 : 8,
-            y: isDragging ? 9 : 4
-        )
-        .overlay {
-            if isSelected {
-                selectionFrame(for: displaySize)
-            }
-        }
-        // Keep hit-testing and gestures scoped to the sticker's own bounds BEFORE `.position`,
-        // because `.position` expands the layout frame to the full canvas.
-        .contentShape(Rectangle())
-        .onTapGesture {
-            onTap()
-        }
-        .highPriorityGesture(
-            DragGesture(minimumDistance: 2, coordinateSpace: .named(canvasCoordinateSpace))
-                .onChanged { value in
-                    onDragChanged(value.translation)
+        ZStack(alignment: .bottomTrailing) {
+            Group {
+                if let image = decodedImage {
+                    Image(uiImage: image)
+                        .resizable()
+                        .scaledToFit()
+                } else {
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .fill(YumojiTheme.card)
                 }
-                .onEnded { value in
-                    onDragEnded(value.translation)
-                },
-            including: isSelected ? .all : .subviews
-        )
+            }
+            .frame(width: displaySize.width, height: displaySize.height)
+            .shadow(
+                color: YumojiTheme.shadow.opacity(isDragging ? 1.25 : 0.85),
+                radius: isDragging ? 14 : 8,
+                y: isDragging ? 9 : 4
+            )
+            .overlay {
+                if isSelected {
+                    selectionFrame(for: displaySize)
+                }
+            }
+            // Keep hit-testing and gestures scoped to the sticker's own bounds BEFORE `.position`,
+            // because `.position` expands the layout frame to the full canvas.
+            .contentShape(Rectangle())
+            .onTapGesture {
+                onTap()
+            }
+            .highPriorityGesture(
+                DragGesture(minimumDistance: 2, coordinateSpace: .named(canvasCoordinateSpace))
+                    .onChanged { value in
+                        onDragChanged(value.translation)
+                    }
+                    .onEnded { value in
+                        onDragEnded(value.translation)
+                    },
+                including: isSelected ? .all : .subviews
+            )
+
+            if isSelected {
+                transformHandle(center: screenPoint)
+                    .offset(x: 16, y: 16)
+            }
+        }
         .rotationEffect(.radians(transform.rotation))
         .position(screenPoint)
         .task(id: record.id) {
@@ -99,6 +109,35 @@ struct BoardStickerItemView: View {
                 decodedImage = StickerThumbnailCache.shared.thumbnail(for: record)
             }
         }
+    }
+
+    private func transformHandle(center: CGPoint) -> some View {
+        ZStack {
+            Circle()
+                .fill(isSnappedUpright ? Color.green : YumojiTheme.accent)
+                .frame(width: 28, height: 28)
+                .overlay(
+                    Circle()
+                        .strokeBorder(YumojiTheme.card, lineWidth: 2.5)
+                )
+                .shadow(color: YumojiTheme.shadow.opacity(0.9), radius: 5, y: 2)
+
+            Image(systemName: "arrow.up.left.and.arrow.down.right")
+                .font(.system(size: 11, weight: .bold))
+                .foregroundStyle(.white)
+        }
+        .frame(width: 44, height: 44)
+        .contentShape(Circle())
+        .accessibilityLabel(lang.t("board.action.transform_handle"))
+        .highPriorityGesture(
+            DragGesture(minimumDistance: 1, coordinateSpace: .named(canvasCoordinateSpace))
+                .onChanged { value in
+                    onHandleTransformChanged(center, value.startLocation, value.location)
+                }
+                .onEnded { _ in
+                    onHandleTransformEnded()
+                }
+        )
     }
 
     private func selectionFrame(for size: CGSize) -> some View {

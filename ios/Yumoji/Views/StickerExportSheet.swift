@@ -9,6 +9,7 @@ struct StickerExportSheet: View {
     var saver: any StickerLibrarySaving = PhotoLibraryStickerSaver()
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(LanguageManager.self) private var lang
     @Environment(ExportPaletteStore.self) private var palette
 
@@ -27,6 +28,8 @@ struct StickerExportSheet: View {
                     paletteSection
                     actionButtons
                 }
+                .frame(maxWidth: 520)
+                .frame(maxWidth: .infinity)
                 .padding(.horizontal, 20)
                 .padding(.top, 12)
                 .padding(.bottom, 28)
@@ -104,7 +107,7 @@ struct StickerExportSheet: View {
                     )
             }
             .aspectRatio(1, contentMode: .fit)
-            .frame(maxWidth: 280)
+            .frame(maxWidth: horizontalSizeClass == .regular ? 320 : 280)
             .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 24, style: .continuous)

@@ -8,6 +8,7 @@ import UIKit
 enum PhotoInput {
     case camera(UIImage)
     case library(PhotosPickerItem)
+    case dropped(Data)
 }
 
 enum CutoutFailure: Equatable {
@@ -134,6 +135,10 @@ final class StickerSession {
             guard let data = try? await item.loadTransferable(type: Data.self) else {
                 return nil
             }
+            return await Task.detached(priority: .userInitiated) {
+                PhotoLoader.decodeWithMetadata(data)
+            }.value
+        case .dropped(let data):
             return await Task.detached(priority: .userInitiated) {
                 PhotoLoader.decodeWithMetadata(data)
             }.value

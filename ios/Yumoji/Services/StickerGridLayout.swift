@@ -1,14 +1,58 @@
 import CoreGraphics
 import Foundation
 
+/// Width class profile determining sensible column bounds and persistence keys.
+enum GridLayoutProfile: Equatable, Sendable {
+    /// iPhone and narrow iPad Split View / Slide Over.
+    case compact
+    /// Regular-width iPad layouts.
+    case regular
+
+    var minColumns: Int {
+        switch self {
+        case .compact: 2
+        case .regular: 3
+        }
+    }
+
+    var maxColumns: Int {
+        switch self {
+        case .compact: 5
+        case .regular: 8
+        }
+    }
+
+    var defaultColumns: Int {
+        switch self {
+        case .compact: 3
+        case .regular: 5
+        }
+    }
+
+    /// Maximum column count that still groups stickers by individual day.
+    var dayMaxColumns: Int {
+        switch self {
+        case .compact: 3
+        case .regular: 4
+        }
+    }
+
+    var columnDefaultsKey: String {
+        switch self {
+        case .compact: "yumoji.grid.columnCount"
+        case .regular: "yumoji.grid.columnCount.regular"
+        }
+    }
+}
+
 enum StickerTimelineGranularity: Equatable, Sendable {
-    /// Year-Month-Day grouping used when zoomed in (2–3 columns).
+    /// Year-Month-Day grouping used when zoomed in.
     case day
-    /// Year-Month grouping used when zoomed out (4–5 columns).
+    /// Year-Month grouping used when zoomed out.
     case month
 
-    static func forColumns(_ columnCount: Int) -> StickerTimelineGranularity {
-        columnCount <= 3 ? .day : .month
+    static func forColumns(_ columnCount: Int, profile: GridLayoutProfile = .compact) -> StickerTimelineGranularity {
+        columnCount <= profile.dayMaxColumns ? .day : .month
     }
 }
 
@@ -36,22 +80,28 @@ enum StickerGridLayout {
     static let zoomInThreshold: CGFloat = 1.22
     static let zoomOutThreshold: CGFloat = 0.82
 
-    private static let columnDefaultsKey = "yumoji.grid.columnCount"
     private static let cardFrameDefaultsKey = "yumoji.grid.showCardFrame"
 
-    static func clampColumns(_ count: Int) -> Int {
-        min(maxColumns, max(minColumns, count))
+    static func clampColumns(_ count: Int, profile: GridLayoutProfile = .compact) -> Int {
+        min(profile.maxColumns, max(profile.minColumns, count))
     }
 
-    static func loadSavedColumns(from defaults: UserDefaults = .standard) -> Int {
-        guard defaults.object(forKey: columnDefaultsKey) != nil else {
-            return defaultColumns
+    static func loadSavedColumns(
+        for profile: GridLayoutProfile = .compact,
+        from defaults: UserDefaults = .standard
+    ) -> Int {
+        guard defaults.object(forKey: profile.columnDefaultsKey) != nil else {
+            return profile.defaultColumns
         }
-        return clampColumns(defaults.integer(forKey: columnDefaultsKey))
+        return clampColumns(defaults.integer(forKey: profile.columnDefaultsKey), profile: profile)
     }
 
-    static func saveColumns(_ count: Int, to defaults: UserDefaults = .standard) {
-        defaults.set(clampColumns(count), forKey: columnDefaultsKey)
+    static func saveColumns(
+        _ count: Int,
+        for profile: GridLayoutProfile = .compact,
+        to defaults: UserDefaults = .standard
+    ) {
+        defaults.set(clampColumns(count, profile: profile), forKey: profile.columnDefaultsKey)
     }
 
     static func loadShowCardFrame(from defaults: UserDefaults = .standard) -> Bool {
@@ -67,25 +117,33 @@ enum StickerGridLayout {
 
     /// Evaluates whether a pinch gesture relative magnification crosses the threshold
     /// to step to fewer (larger) or more (smaller) columns.
-    static func steppedColumns(current: Int, relativeMagnification: CGFloat) -> Int? {
-        let clampedCurrent = clampColumns(current)
-        if relativeMagnification >= zoomInThreshold, clampedCurrent > minColumns {
+    static func steppedColumns(
+        current: Int,
+        relativeMagnification: CGFloat,
+        profile: GridLayoutProfile = .compact
+    ) -> Int? {
+        let clampedCurrent = clampColumns(current, profile: profile)
+        if relativeMagnification >= zoomInThreshold, clampedCurrent > profile.minColumns {
             return clampedCurrent - 1
         }
-        if relativeMagnification <= zoomOutThreshold, clampedCurrent < maxColumns {
+        if relativeMagnification <= zoomOutThreshold, clampedCurrent < profile.maxColumns {
             return clampedCurrent + 1
         }
         return nil
     }
 
     static func cardMetrics(for columnCount: Int) -> GridCardMetrics {
-        switch clampColumns(columnCount) {
-        case 2:
+        switch columnCount {
+        case ...2:
             return GridCardMetrics(spacing: 12, cornerRadius: 18, contentPadding: 12)
         case 3:
             return GridCardMetrics(spacing: 10, cornerRadius: 16, contentPadding: 9)
         case 4:
+            return GridCardMetrics(spacing: 9, cornerRadius: 14, contentPadding: 7)
+        case 5:
             return GridCardMetrics(spacing: 8, cornerRadius: 12, contentPadding: 6)
+        case 6:
+            return GridCardMetrics(spacing: 8, cornerRadius: 11, contentPadding: 5)
         default:
             return GridCardMetrics(spacing: 6, cornerRadius: 10, contentPadding: 4)
         }
@@ -146,9 +204,10 @@ enum StickerGridLayout {
     static func distributeMasonry<Item>(
         items: [Item],
         columnCount: Int,
+        profile: GridLayoutProfile = .compact,
         aspectRatio: (Item) -> Double
     ) -> [[Item]] {
-        let count = clampColumns(columnCount)
+        let count = clampColumns(columnCount, profile: profile)
         var columns = Array(repeating: [Item](), count: count)
         var heights = Array(repeating: 0.0, count: count)
 
